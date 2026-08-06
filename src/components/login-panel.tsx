@@ -9,6 +9,7 @@ export function LoginPanel({ demo, initialMessage = "" }: { demo: boolean; initi
   const router = useRouter();
   const [tab, setTab] = useState<"parent" | "student">("parent");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [handle, setHandle] = useState(demo ? "minseo" : "");
   const [pin, setPin] = useState(demo ? "123456" : "");
   const [message, setMessage] = useState(initialMessage);
@@ -39,7 +40,7 @@ export function LoginPanel({ demo, initialMessage = "" }: { demo: boolean; initi
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (tab === "parent") requestLogin({ method: "magic_link", email });
+    if (tab === "parent") requestLogin({ method: "password", email, password });
     else requestLogin({ handle, pin });
   }
 
@@ -54,11 +55,15 @@ export function LoginPanel({ demo, initialMessage = "" }: { demo: boolean; initi
       </div>
       <div className="mb-6">
         <h1 className="text-2xl font-black tracking-tight">{tab === "parent" ? "부모님, 반가워요" : "오늘 공부를 시작해볼까요?"}</h1>
-        <p className="mt-2 text-sm leading-6 text-slate-500">{tab === "parent" ? "계획과 제출물, 테스트 결과를 한 곳에서 확인하세요." : "부모님이 만들어 준 아이디와 6자리 PIN을 입력하세요."}</p>
+        <p className="mt-2 text-sm leading-6 text-slate-500">{tab === "parent" ? "이메일과 비밀번호로 바로 로그인하세요." : "부모님이 만들어 준 아이디와 6자리 PIN을 입력하세요."}</p>
       </div>
       <form onSubmit={submit} className="space-y-4">
         {tab === "parent" ? (
-          <label className="block"><span className="mb-2 block text-sm font-bold text-slate-700">이메일</span><span className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 focus-within:border-violet-400 focus-within:ring-4 focus-within:ring-violet-50"><Mail size={18} className="text-slate-400" /><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="parent@example.com" className="h-12 min-w-0 flex-1 outline-none" /></span></label>
+          <>
+            <label className="block"><span className="mb-2 block text-sm font-bold text-slate-700">이메일</span><span className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 focus-within:border-violet-400 focus-within:ring-4 focus-within:ring-violet-50"><Mail size={18} className="text-slate-400" /><input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="parent@example.com" className="h-12 min-w-0 flex-1 outline-none" /></span></label>
+            <label className="block"><span className="mb-2 block text-sm font-bold text-slate-700">비밀번호</span><span className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 focus-within:border-violet-400 focus-within:ring-4 focus-within:ring-violet-50"><LockKeyhole size={18} className="text-slate-400" /><input required type="password" minLength={8} maxLength={72} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="8자 이상" className="h-12 min-w-0 flex-1 outline-none" /></span></label>
+            <p className="text-xs leading-5 text-slate-400">관리자가 만든 부모 계정으로 로그인합니다. 인증 메일은 발송되지 않습니다.</p>
+          </>
         ) : (
           <>
             <label className="block"><span className="mb-2 block text-sm font-bold text-slate-700">학생 아이디</span><span className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 focus-within:border-violet-400"><UserRound size={18} className="text-slate-400" /><input required value={handle} onChange={(event) => setHandle(event.target.value)} className="h-12 min-w-0 flex-1 outline-none" /></span></label>
@@ -66,14 +71,8 @@ export function LoginPanel({ demo, initialMessage = "" }: { demo: boolean; initi
           </>
         )}
         {message && <p className="rounded-xl bg-violet-50 p-3 text-sm font-medium text-violet-700" role="status">{message}</p>}
-        <Button type="submit" className="h-12 w-full" disabled={loading}>{loading ? "확인 중…" : tab === "parent" ? "이메일로 계속하기" : "학습 시작하기"}<ArrowRight size={17} /></Button>
+        <Button type="submit" className="h-12 w-full" disabled={loading}>{loading ? "확인 중…" : tab === "parent" ? "로그인" : "학습 시작하기"}<ArrowRight size={17} /></Button>
       </form>
-      {tab === "parent" && (
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <Button variant="secondary" onClick={() => requestLogin({ method: "google" })}>Google</Button>
-          <Button variant="secondary" onClick={() => requestLogin({ method: "kakao" })}>Kakao</Button>
-        </div>
-      )}
       {demo ? <button onClick={() => router.push(tab === "parent" ? "/dashboard" : "/student")} className="mt-5 flex w-full items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-violet-700"><CheckCircle2 size={14} /> 데모 계정으로 바로 둘러보기</button> : null}
       {demo && tab === "student" ? <p className="mt-3 text-center text-[11px] text-slate-400">데모: minseo 또는 jiwoo / PIN 123456</p> : null}
     </div>
