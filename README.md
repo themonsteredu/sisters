@@ -55,7 +55,7 @@ npm run dev
 5. `NEXT_PUBLIC_DEMO_MODE=false`로 바꾼 뒤 최초 운영자 profile의 `role`을 `admin`으로 지정합니다.
 6. 운영자로 `/admin/ai`에 로그인해 OpenAI·Google 키와 기능별 모델을 저장합니다. 키는 AES-256-GCM으로 암호화되며 브라우저로 다시 반환되지 않습니다.
 7. PortOne store/channel/API secret, Resend, VAPID, SOLAPI 값과 승인된 알림톡 템플릿을 필요에 따라 설정합니다.
-8. Vercel에 `CRON_SECRET`을 설정합니다. `vercel.json`이 작업 큐를 5분마다, 보존 삭제를 매일 호출합니다.
+8. Vercel에 `CRON_SECRET`을 설정합니다. Hobby 플랜 제한에 맞춰 `vercel.json`이 작업 큐를 매일 00:00 UTC(한국시간 09:00), 보존 삭제를 매일 03:15 UTC(한국시간 12:15)에 호출합니다.
 
 환경변수의 OpenAI/Google 키는 초기 부트스트랩용 fallback입니다. 운영 중에는 관리자가 화면에서 공급자와 모델을 바꿀 수 있습니다. 기본 모델 목록에 없는 모델 ID도 직접 입력할 수 있습니다.
 
