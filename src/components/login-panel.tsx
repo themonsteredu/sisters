@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function LoginPanel() {
+export function LoginPanel({ demo, initialMessage = "" }: { demo: boolean; initialMessage?: string }) {
   const router = useRouter();
   const [tab, setTab] = useState<"parent" | "student">("parent");
   const [email, setEmail] = useState("");
-  const [handle, setHandle] = useState("minseo");
-  const [pin, setPin] = useState("123456");
-  const [message, setMessage] = useState("");
+  const [handle, setHandle] = useState(demo ? "minseo" : "");
+  const [pin, setPin] = useState(demo ? "123456" : "");
+  const [message, setMessage] = useState(initialMessage);
   const [loading, setLoading] = useState(false);
 
   async function requestLogin(body: object) {
@@ -74,8 +74,8 @@ export function LoginPanel() {
           <Button variant="secondary" onClick={() => requestLogin({ method: "kakao" })}>Kakao</Button>
         </div>
       )}
-      <button onClick={() => router.push(tab === "parent" ? "/dashboard" : "/student")} className="mt-5 flex w-full items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-violet-700"><CheckCircle2 size={14} /> 데모 계정으로 바로 둘러보기</button>
-      {tab === "student" && <p className="mt-3 text-center text-[11px] text-slate-400">데모: minseo 또는 jiwoo / PIN 123456</p>}
+      {demo ? <button onClick={() => router.push(tab === "parent" ? "/dashboard" : "/student")} className="mt-5 flex w-full items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-violet-700"><CheckCircle2 size={14} /> 데모 계정으로 바로 둘러보기</button> : null}
+      {demo && tab === "student" ? <p className="mt-3 text-center text-[11px] text-slate-400">데모: minseo 또는 jiwoo / PIN 123456</p> : null}
     </div>
   );
 }

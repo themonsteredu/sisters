@@ -50,7 +50,7 @@ npm run dev
 
 1. Supabase 프로젝트를 만들고 `.env.example`의 URL·anon key·service role key를 설정합니다.
 2. `supabase/migrations/202608060001_initial_schema.sql`을 적용합니다. 브라우저에 service role key를 노출하지 마세요.
-3. Supabase Auth에서 이메일, Google, Kakao 공급자와 `/api/auth/callback` redirect URL을 설정합니다.
+3. Supabase Auth에서 이메일 공급자를 활성화하고 운영 주소를 Site URL로, `https://운영주소/api/auth/callback`을 Redirect URL로 설정합니다. 현재 Vercel 운영 주소는 `https://sonsisters.vercel.app`입니다. Google과 Kakao는 각 공급자 키를 등록한 뒤 사용합니다.
 4. 최소 32자의 `STUDENT_SESSION_SECRET`과 base64 32바이트 `CREDENTIAL_ENCRYPTION_KEY`를 생성합니다.
 5. `NEXT_PUBLIC_DEMO_MODE=false`로 바꾼 뒤 최초 운영자 profile의 `role`을 `admin`으로 지정합니다.
 6. 운영자로 `/admin/ai`에 로그인해 OpenAI·Google 키와 기능별 모델을 저장합니다. 키는 AES-256-GCM으로 암호화되며 브라우저로 다시 반환되지 않습니다.

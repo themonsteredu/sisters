@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getPublicAppUrl, isDemoMode } from "@/lib/config";
+import { isDemoMode } from "@/lib/config";
 import { assertSameOrigin } from "@/lib/security/request";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -15,12 +15,13 @@ export async function POST(request: Request) {
     if (isDemoMode) return Response.json({ ok: true, redirectTo: "/dashboard", demo: true });
     const supabase = await createSupabaseServerClient();
     if (!supabase) return Response.json({ error: "Supabase 인증 설정이 필요합니다." }, { status: 503 });
-    const callback = `${getPublicAppUrl()}/api/auth/callback?next=/dashboard`;
+    const callback = new URL("/api/auth/callback", request.url);
+    callback.searchParams.set("next", "/dashboard");
 
     if (input.method === "magic_link") {
       const { error } = await supabase.auth.signInWithOtp({
         email: input.email,
-        options: { emailRedirectTo: callback },
+        options: { emailRedirectTo: callback.toString() },
       });
       if (error) throw error;
       return Response.json({ ok: true, message: "로그인 링크를 이메일로 보냈습니다." });
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: input.method,
-      options: { redirectTo: callback, skipBrowserRedirect: true },
+      options: { redirectTo: callback.toString(), skipBrowserRedirect: true },
     });
     if (error) throw error;
     return Response.json({ ok: true, redirectTo: data.url });
