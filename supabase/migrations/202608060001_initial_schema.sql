@@ -376,9 +376,12 @@ $$;
 
 alter table public.sisters_profiles enable row level security;
 drop policy if exists "sisters profiles self or admin" on public.sisters_profiles;
+drop policy if exists "sisters profiles self insert" on public.sisters_profiles;
 drop policy if exists "sisters profiles parent self update" on public.sisters_profiles;
 drop policy if exists "sisters profiles admin update" on public.sisters_profiles;
 create policy "sisters profiles self or admin" on public.sisters_profiles for select using (id = auth.uid() or public.sisters_is_app_admin());
+create policy "sisters profiles self insert" on public.sisters_profiles for insert
+with check (id = auth.uid() and role = 'parent');
 create policy "sisters profiles parent self update" on public.sisters_profiles for update
 using (id = auth.uid() and role = 'parent')
 with check (id = auth.uid() and role = 'parent');
