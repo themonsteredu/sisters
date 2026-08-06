@@ -16,7 +16,6 @@ export async function POST(request: Request) {
     const supabase = await createSupabaseServerClient();
     if (!supabase) return Response.json({ error: "Supabase 인증 설정이 필요합니다." }, { status: 503 });
     const callback = new URL("/api/auth/callback", request.url);
-    callback.searchParams.set("next", "/dashboard");
 
     if (input.method === "magic_link") {
       const { error } = await supabase.auth.signInWithOtp({

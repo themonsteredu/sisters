@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowRight, BarChart3, BookOpenCheck, BrainCircuit, Camera, CalendarCheck2, Check, ShieldCheck, Sparkles } from "lucide-react";
 
 const features = [
@@ -8,7 +9,26 @@ const features = [
   { icon: BarChart3, title: "성장 리포트", description: "완료율, 정시 수행, 과목별 점수와 취약 단원을 두 자녀별로 비교해요.", color: "bg-amber-100 text-amber-700" },
 ];
 
-export default function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ code?: string | string[]; error?: string | string[]; error_description?: string | string[] }>;
+}) {
+  const query = await searchParams;
+  const code = Array.isArray(query.code) ? query.code[0] : query.code;
+  const authError = Array.isArray(query.error_description)
+    ? query.error_description[0]
+    : query.error_description ?? (Array.isArray(query.error) ? query.error[0] : query.error);
+
+  if (code) {
+    const callbackParams = new URLSearchParams({ code });
+    redirect(`/api/auth/callback?${callbackParams.toString()}`);
+  }
+  if (authError) {
+    const loginParams = new URLSearchParams({ error: authError });
+    redirect(`/login?${loginParams.toString()}`);
+  }
+
   return (
     <main className="min-h-screen overflow-hidden bg-[#fbfaff]">
       <nav className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 md:px-8"><Link href="/" className="flex items-center gap-3 text-xl font-black"><span className="grid size-10 place-items-center rounded-2xl bg-violet-600 text-white"><BookOpenCheck size={21} /></span>Sisters</Link><div className="flex items-center gap-2"><Link href="/login" className="rounded-xl px-4 py-2 text-sm font-bold text-slate-600 hover:bg-white">로그인</Link><Link href="/dashboard" className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-lg">무료 베타 체험</Link></div></nav>
