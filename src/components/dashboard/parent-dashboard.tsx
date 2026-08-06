@@ -45,7 +45,7 @@ export function ParentDashboard() {
   return (
     <div className="space-y-7">
       <section className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
-        <div><p className="text-sm font-bold text-[#6353b7]">부모 대시보드</p><h1 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-800 md:text-[2rem]">좋은 아침이에요, 정윤님 👋</h1><p className="mt-2 text-sm text-slate-500">두 아이의 오늘 학습 흐름을 한눈에 확인하세요.</p></div>
+        <div><p className="text-sm font-bold text-[#6353b7]">부모 대시보드</p><h1 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-800 md:text-[2rem]">좋은 아침이에요, 정윤님</h1><p className="mt-2 text-sm text-slate-500">두 아이의 오늘 학습 흐름을 한눈에 확인하세요.</p></div>
         <div className="flex flex-wrap gap-2"><Link href="/planning"><Button variant="secondary"><CalendarPlus size={17} /> 계획 만들기</Button></Link><Link href="/tests"><Button><Sparkles size={17} /> AI 테스트 만들기</Button></Link></div>
       </section>
 

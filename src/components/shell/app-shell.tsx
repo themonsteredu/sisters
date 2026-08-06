@@ -57,7 +57,7 @@ export function AppShell({ children, role = "parent" }: { children: ReactNode; r
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const nav = role === "student" ? studentNav : role === "admin" ? adminNav : parentNav;
-  const user = role === "student" ? { name: "민서", detail: "중학교 2학년", avatar: "🌿" } : role === "admin" ? { name: "Sisters 운영자", detail: "시스템 관리자", avatar: "S" } : { name: "정윤 부모님", detail: "민서 · 지우의 학습매니저", avatar: "윤" };
+  const user = role === "student" ? { name: "민서", detail: "중학교 2학년", avatar: "민" } : role === "admin" ? { name: "Sisters 운영자", detail: "시스템 관리자", avatar: "S" } : { name: "정윤 부모님", detail: "민서 · 지우의 학습매니저", avatar: "윤" };
 
   return (
     <div className="min-h-screen bg-[#edf0f4] text-slate-800">
@@ -90,7 +90,7 @@ export function AppShell({ children, role = "parent" }: { children: ReactNode; r
 
       <div className="lg:pl-64">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#dfe3e8] bg-[#f8f8f6]/95 px-4 backdrop-blur md:px-8 lg:h-20">
-          <div className="flex items-center gap-3"><button onClick={() => setMobileMenuOpen(true)} className="grid size-10 place-items-center rounded-xl text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="메뉴" aria-expanded={mobileMenuOpen}><Menu size={21} /></button><div className="hidden sm:block"><span className="text-xs font-medium text-slate-400">2026년 8월 6일 목요일</span><p className="text-sm font-bold">오늘도 한 걸음씩 자라요 🌱</p></div></div>
+          <div className="flex items-center gap-3"><button onClick={() => setMobileMenuOpen(true)} className="grid size-10 place-items-center rounded-xl text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="메뉴" aria-expanded={mobileMenuOpen}><Menu size={21} /></button><div className="hidden sm:block"><span className="text-xs font-medium text-slate-400">2026년 8월 6일 목요일</span><p className="text-sm font-bold">오늘도 한 걸음씩 자라요</p></div></div>
           <div className="flex items-center gap-2">
             {role === "parent" ? <Link href="/reviews" className="hidden items-center gap-1.5 rounded-full bg-[#e9e6f7] px-3 py-2 text-xs font-bold text-[#5544a8] md:flex"><Sparkles size={14} /> AI 분석 2건</Link> : null}
             <button className="relative grid size-10 place-items-center rounded-xl border border-[#d9dee5] bg-[#fafaf7] text-slate-600 hover:bg-[#f1f2f0]" aria-label="알림"><Bell size={19} /><span className="absolute right-2 top-2 size-2 rounded-full bg-rose-500 ring-2 ring-[#fafaf7]" /></button>
