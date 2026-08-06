@@ -27,10 +27,8 @@ export function LoginPanel({ demo, initialMessage = "" }: { demo: boolean; initi
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "로그인에 실패했습니다.");
-      if (data.redirectTo) {
-        if (data.redirectTo.startsWith("http")) window.location.href = data.redirectTo;
-        else router.push(data.redirectTo);
-      } else setMessage(data.message ?? "요청을 완료했습니다.");
+      if (data.redirectTo) window.location.assign(data.redirectTo);
+      else setMessage(data.message ?? "요청을 완료했습니다.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "로그인에 실패했습니다.");
     } finally {

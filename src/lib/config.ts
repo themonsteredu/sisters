@@ -1,4 +1,6 @@
-export const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
+// Demo data must be explicitly enabled. A missing environment variable in a
+// production deployment must never expose sample family or student records.
+export const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
 export function hasSupabaseConfig() {
   return Boolean(

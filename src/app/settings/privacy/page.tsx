@@ -3,6 +3,8 @@ import { PrivacySettings } from "@/components/settings/privacy-settings";
 import { isDemoMode } from "@/lib/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 export default async function PrivacySettingsPage() {
   let familyId = "family-demo";
   if (!isDemoMode) {

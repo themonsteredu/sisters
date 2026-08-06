@@ -4,6 +4,8 @@ import { GuardianConsent } from "@/components/onboarding/guardian-consent";
 import { getParentActor } from "@/lib/auth/guard";
 import { isDemoMode } from "@/lib/config";
 import { demoStudents } from "@/lib/demo-data";
+
+export const dynamic = "force-dynamic";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function OnboardingPage() {

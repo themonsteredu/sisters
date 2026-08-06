@@ -2,11 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Bot, Check, Eye, EyeOff, KeyRound, LockKeyhole, RefreshCcw, Save, ServerCog, ShieldCheck, Sparkles, TriangleAlert } from "lucide-react";
-import { useDemo } from "@/components/providers/demo-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { capabilityLabels, modelCatalog } from "@/lib/ai/catalog";
+import { capabilityLabels, defaultModelSelections, modelCatalog } from "@/lib/ai/catalog";
 import type { AICapability, AIModelSelection, AIProviderName } from "@/lib/domain/types";
 
 interface ProviderStatus {
@@ -20,23 +19,25 @@ const emptyStatus: Record<AIProviderName, ProviderStatus> = {
 };
 
 export function AISettings() {
-  const { selections, updateSelection } = useDemo();
+  const [selections, setSelections] = useState<AIModelSelection[]>(() => defaultModelSelections.map((selection) => ({ ...selection })));
   const [providerStatus, setProviderStatus] = useState(emptyStatus);
   const [keys, setKeys] = useState<Record<AIProviderName, string>>({ openai: "", google: "" });
   const [visible, setVisible] = useState<Record<AIProviderName, boolean>>({ openai: false, google: false });
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
 
+  function updateSelection(selection: AIModelSelection) {
+    setSelections((current) => current.map((item) => (item.capability === selection.capability ? selection : item)));
+  }
+
   useEffect(() => {
     fetch("/api/admin/ai-settings")
       .then((response) => response.json())
       .then((data) => {
         setProviderStatus((current) => ({ ...current, ...(data.providers ?? {}) }));
-        if (Array.isArray(data.selections)) data.selections.forEach((selection: AIModelSelection) => updateSelection(selection));
+        if (Array.isArray(data.selections)) setSelections(data.selections);
       })
       .catch(() => undefined);
-  // updateSelection is stable for the lifetime of the demo provider.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const grouped = useMemo(() => ({
