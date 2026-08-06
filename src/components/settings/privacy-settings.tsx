@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { BellRing, DatabaseBackup, FileArchive, ShieldCheck, Trash2 } from "lucide-react";
+import { BellRing, DatabaseBackup, FileArchive, LockKeyhole, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -58,8 +58,9 @@ export function PrivacySettings({ familyId, publicPushKey }: { familyId: string;
 
   return <div className="space-y-6"><div><p className="text-sm font-bold text-violet-600">계정과 개인정보</p><h1 className="mt-1 text-3xl font-black">내 가족 데이터 관리</h1><p className="mt-2 text-sm text-slate-500">알림, 보호자 동의, 내보내기와 삭제 요청을 한곳에서 관리합니다.</p></div>
     {message ? <p role="status" className="rounded-xl bg-violet-50 p-4 text-sm font-semibold text-violet-800">{message}</p> : null}
-    <div className="grid gap-4 md:grid-cols-2"><Card className="p-6"><BellRing className="text-violet-600" /><h2 className="mt-4 text-lg font-black">이 기기 웹푸시</h2><p className="mt-2 text-sm leading-6 text-slate-500">마감 임박, 제출 검수와 시험 결과를 설치된 PWA에서 받습니다.</p><Button onClick={enablePush} disabled={busy !== null} className="mt-5">{busy === "push" ? "설정 중…" : "웹푸시 켜기"}</Button></Card>
-      <Card className="p-6"><ShieldCheck className="text-emerald-600" /><h2 className="mt-4 text-lg font-black">보호자 동의</h2><p className="mt-2 text-sm leading-6 text-slate-500">학생별 본인확인과 AI 처리 동의 상태를 관리합니다.</p><Link href="/onboarding" className="mt-5 inline-flex min-h-10 items-center rounded-xl bg-emerald-50 px-4 text-sm font-bold text-emerald-700">동의 화면 열기</Link></Card></div>
+    <div className="grid gap-4 md:grid-cols-3"><Card className="p-6"><BellRing className="text-violet-600" /><h2 className="mt-4 text-lg font-black">이 기기 웹푸시</h2><p className="mt-2 text-sm leading-6 text-slate-500">마감 임박, 제출 검수와 시험 결과를 설치된 PWA에서 받습니다.</p><Button onClick={enablePush} disabled={busy !== null} className="mt-5">{busy === "push" ? "설정 중…" : "웹푸시 켜기"}</Button></Card>
+      <Card className="p-6"><ShieldCheck className="text-emerald-600" /><h2 className="mt-4 text-lg font-black">보호자 동의</h2><p className="mt-2 text-sm leading-6 text-slate-500">학생별 본인확인과 AI 처리 동의 상태를 관리합니다.</p><Link href="/onboarding" className="mt-5 inline-flex min-h-10 items-center rounded-xl bg-emerald-50 px-4 text-sm font-bold text-emerald-700">동의 화면 열기</Link></Card>
+      <Card className="p-6"><LockKeyhole className="text-slate-700" /><h2 className="mt-4 text-lg font-black">관리자 PIN</h2><p className="mt-2 text-sm leading-6 text-slate-500">관리자 화면에 사용할 6자리 PIN을 만들거나 변경합니다.</p><Link href="/settings/admin-pin" className="mt-5 inline-flex min-h-10 items-center rounded-xl bg-slate-100 px-4 text-sm font-bold text-slate-700">관리자 PIN 설정</Link></Card></div>
     <Card className="divide-y divide-slate-100 overflow-hidden"><SettingRow icon={FileArchive} title="가족 데이터 내보내기" detail="계획, 제출 분석, 점수와 승인 기록을 파일로 요청합니다."><Button variant="secondary" onClick={() => requestData("export")} disabled={busy !== null}>{busy === "export" ? "접수 중…" : "내보내기 요청"}</Button></SettingRow><SettingRow icon={DatabaseBackup} title="동의 철회" detail="철회 범위를 운영자가 확인한 뒤 관련 처리를 진행합니다."><Button variant="secondary" onClick={() => requestData("withdraw_consent")} disabled={busy !== null}>철회 요청</Button></SettingRow><SettingRow icon={Trash2} title="회원 탈퇴 및 데이터 삭제" detail="복구할 수 있는 확인 기간을 거쳐 안전하게 처리합니다." danger><Button variant="danger" onClick={() => requestData("delete")} disabled={busy !== null}>{busy === "delete" ? "접수 중…" : "삭제 요청"}</Button></SettingRow></Card>
     <div className="flex flex-wrap gap-4 text-sm font-semibold text-slate-500"><Link href="/legal/privacy" className="hover:text-violet-700">개인정보 처리방침</Link><Link href="/legal/terms" className="hover:text-violet-700">이용약관</Link></div>
   </div>;

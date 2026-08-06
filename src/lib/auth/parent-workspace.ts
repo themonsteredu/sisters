@@ -59,7 +59,6 @@ function seoulDate() {
 export async function requireParentWorkspace(): Promise<ParentWorkspaceData> {
   const actor = await getParentActor();
   if (!actor) redirect("/login");
-  if (actor.role === "admin") redirect("/admin/ai");
 
   const supabase = await createSupabaseServerClient();
   if (!supabase) redirect("/login?error=Supabase%20설정이%20필요합니다");

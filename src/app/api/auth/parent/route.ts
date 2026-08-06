@@ -41,12 +41,7 @@ export async function POST(request: Request) {
       );
       if (profileError) return Response.json({ error: `프로필 생성 실패: ${profileError.message}` }, { status: 500 });
 
-      const { data: profile } = await supabase
-        .from("sisters_profiles")
-        .select("role")
-        .eq("id", data.user.id)
-        .single();
-      return Response.json({ ok: true, redirectTo: profile?.role === "admin" ? "/admin/ai" : "/dashboard" });
+      return Response.json({ ok: true, redirectTo: "/dashboard" });
     }
 
     const { data, error } = await supabase.auth.signInWithOAuth({

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -46,6 +46,7 @@ const studentNav: NavItem[] = [
 
 const adminNav: NavItem[] = [
   { href: "/admin/ai", label: "AI 모델", icon: Sparkles },
+  { href: "/dashboard", label: "부모 화면", icon: Home },
 ];
 
 interface ShellUser {
@@ -56,6 +57,7 @@ interface ShellUser {
 
 export function AppShell({ children, role = "parent", user: userProp }: { children: ReactNode; role?: ShellRole; user?: ShellUser }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const nav = role === "student" ? studentNav : role === "admin" ? adminNav : parentNav;
   const sampleUser = role === "student" ? { name: "학생", detail: "학습 계정", avatar: "학" } : role === "admin" ? { name: "Sisters 운영자", detail: "시스템 관리자", avatar: "S" } : { name: "부모님", detail: "가족 학습매니저", avatar: "부" };
@@ -68,6 +70,12 @@ export function AppShell({ children, role = "parent", user: userProp }: { childr
     day: "numeric",
     weekday: "long",
   }).format(new Date());
+
+  async function logoutAdmin() {
+    await fetch("/api/auth/admin", { method: "DELETE" });
+    router.replace("/login");
+    router.refresh();
+  }
 
   return (
     <div className="min-h-screen bg-[#edf0f4] text-slate-800">
@@ -94,7 +102,7 @@ export function AppShell({ children, role = "parent", user: userProp }: { childr
         <div className="flex items-center gap-3 border-t border-slate-100 p-4">
           <span className="grid size-10 place-items-center rounded-full bg-amber-100 font-bold text-amber-700">{user.avatar}</span>
           <div className="min-w-0 flex-1"><strong className="block truncate text-sm">{user.name}</strong><span className="block truncate text-xs text-slate-400">{user.detail}</span></div>
-          <Link href="/login" aria-label="로그아웃" className="text-slate-400 hover:text-slate-700"><LogOut size={18} /></Link>
+          {role === "admin" ? <button type="button" onClick={logoutAdmin} aria-label="관리자 로그아웃" className="text-slate-400 hover:text-slate-700"><LogOut size={18} /></button> : <Link href="/login" aria-label="로그아웃" className="text-slate-400 hover:text-slate-700"><LogOut size={18} /></Link>}
         </div>
       </aside>
 

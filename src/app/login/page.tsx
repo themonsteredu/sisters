@@ -14,7 +14,9 @@ export default async function LoginPage({
   const initialMessage = authError
     ? `로그인 실패: ${authError}`
     : reason === "admin"
-      ? "관리자 로그인이 필요합니다. 로그인 후에도 이 문구가 나오면 Supabase에서 관리자 권한을 지정해주세요."
+      ? "관리자 PIN을 입력해 주세요."
+      : reason === "admin-setup"
+        ? "먼저 부모 계정으로 로그인한 뒤 관리자 PIN을 만들어 주세요."
       : "";
 
   return (
@@ -25,7 +27,7 @@ export default async function LoginPage({
         <div className="relative max-w-lg"><span className="mb-5 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-xs font-bold"><ShieldCheck size={15} /> 가족별 안전한 학습공간</span><h2 className="text-5xl font-black leading-[1.15] tracking-tight">계획한 공부가<br />진짜 성장으로<br />이어지도록.</h2><p className="mt-6 max-w-md text-lg leading-8 text-slate-100">오늘 할 일, 학습 증빙, 부모 검수, 테스트와 보완학습까지 한 흐름으로 연결합니다.</p></div>
         <p className="relative text-xs text-slate-200">AI는 1차 분석만 담당하고 최종 판단은 언제나 부모님이 합니다.</p>
       </div>
-      <div className="flex items-center justify-center p-5 md:p-10"><LoginPanel demo={isDemoMode} initialMessage={initialMessage} /></div>
+      <div className="flex items-center justify-center p-5 md:p-10"><LoginPanel demo={isDemoMode} initialMessage={initialMessage} initialTab={reason === "admin" ? "admin" : "parent"} /></div>
     </main>
   );
 }

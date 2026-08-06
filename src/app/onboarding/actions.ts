@@ -50,7 +50,6 @@ export async function createFamilySetup(
 ): Promise<FamilySetupState> {
   const actor = await getParentActor();
   if (!actor) return { ok: false, message: "로그인이 만료되었습니다. 다시 로그인해 주세요." };
-  if (actor.role !== "parent") return { ok: false, message: "부모 계정으로 가족을 등록해 주세요." };
 
   let rawStudents: unknown;
   try {
