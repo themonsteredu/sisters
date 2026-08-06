@@ -1,0 +1,5 @@
+import Link from "next/link";
+
+export default function TermsPage() {
+  return <main className="min-h-screen bg-slate-50 px-5 py-12"><article className="mx-auto max-w-3xl rounded-3xl bg-white p-7 shadow-sm md:p-12"><Link href="/" className="text-sm font-bold text-violet-700">← Sisters</Link><h1 className="mt-6 text-3xl font-black">이용약관</h1><p className="mt-2 text-xs text-slate-400">초안 · 2026년 8월 6일 · 공개 전 법률 검토 필요</p><div className="mt-8 space-y-5 text-sm leading-7 text-slate-600"><p>Sisters는 부모와 학생의 학습계획, 수행 확인과 테스트를 돕는 무료 베타 서비스입니다.</p><h2 className="text-lg font-black text-slate-900">계정과 책임</h2><p>부모는 가족 공간과 학생 계정을 관리하며 PIN을 안전하게 보관해야 합니다. 학생의 제출 승인과 성취 판단에 대한 최종 책임은 보호자에게 있습니다.</p><h2 className="text-lg font-black text-slate-900">AI 기능</h2><p>AI 결과는 오류가 있을 수 있는 학습 보조 정보입니다. 낮은 신뢰도 결과와 서술·음성 평가는 부모 검수 없이 확정되지 않습니다.</p><h2 className="text-lg font-black text-slate-900">외부 서비스</h2><p>엠베스트 계정이나 재생 기록을 수집하지 않으며 강좌명, 회차와 사용자가 입력한 외부 링크만 관리합니다. 외부 서비스의 이용조건은 해당 제공자의 정책을 따릅니다.</p><h2 className="text-lg font-black text-slate-900">베타 운영</h2><p>안전과 품질을 위해 사용량을 제한하거나 기능을 변경할 수 있으며 중요한 변경은 앱 알림 또는 이메일로 안내합니다.</p></div></article></main>;
+}

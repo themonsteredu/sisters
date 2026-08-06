@@ -1,0 +1,25 @@
+# dependencies
+/node_modules
+/.pnpm-store
+
+# next
+/.next
+/out
+
+# local secrets
+.env
+.env.local
+.env.*.local
+
+# test and tooling
+/coverage
+*.tsbuildinfo
+.vercel
+
+# system
+.DS_Store
+Thumbs.db
+
+# Codex scratch and deliverables
+/work
+/outputs

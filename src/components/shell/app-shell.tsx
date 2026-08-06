@@ -1,0 +1,113 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState, type ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
+import {
+  Bell,
+  BookOpenCheck,
+  BrainCircuit,
+  CalendarDays,
+  ChartNoAxesCombined,
+  CheckSquare,
+  ClipboardCheck,
+  Home,
+  LogOut,
+  Menu,
+  Settings,
+  ShieldCheck,
+  Sparkles,
+  Users,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+
+type ShellRole = "parent" | "student" | "admin";
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  badge?: string;
+}
+
+const parentNav: NavItem[] = [
+  { href: "/dashboard", label: "홈", icon: Home },
+  { href: "/planning", label: "학습계획", icon: CalendarDays },
+  { href: "/reviews", label: "제출검수", icon: ClipboardCheck, badge: "2" },
+  { href: "/tests", label: "테스트", icon: BrainCircuit },
+  { href: "/reports", label: "리포트", icon: ChartNoAxesCombined },
+];
+
+const studentNav: NavItem[] = [
+  { href: "/student", label: "오늘", icon: CheckSquare },
+  { href: "/student/tests", label: "테스트", icon: BrainCircuit },
+  { href: "/student/progress", label: "내 기록", icon: ChartNoAxesCombined },
+];
+
+const adminNav: NavItem[] = [
+  { href: "/admin", label: "운영 현황", icon: ShieldCheck },
+  { href: "/admin/ai", label: "AI 모델", icon: Sparkles },
+  { href: "/admin/families", label: "가족 관리", icon: Users },
+  { href: "/admin/notifications", label: "알림 채널", icon: Bell },
+];
+
+export function AppShell({ children, role = "parent" }: { children: ReactNode; role?: ShellRole }) {
+  const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const nav = role === "student" ? studentNav : role === "admin" ? adminNav : parentNav;
+  const user = role === "student" ? { name: "민서", detail: "중학교 2학년", avatar: "🌿" } : role === "admin" ? { name: "Sisters 운영자", detail: "시스템 관리자", avatar: "S" } : { name: "정윤 부모님", detail: "민서 · 지우의 학습매니저", avatar: "윤" };
+
+  return (
+    <div className="min-h-screen bg-[#f7f7fb] text-slate-900">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-slate-200 bg-white lg:flex">
+        <Link href="/" className="flex h-20 items-center gap-3 border-b border-slate-100 px-6">
+          <span className="grid size-10 place-items-center rounded-2xl bg-violet-600 text-white shadow-lg shadow-violet-200"><BookOpenCheck size={21} /></span>
+          <div><strong className="block text-lg tracking-tight">Sisters</strong><span className="text-xs text-slate-400">우리 가족 학습 매니저</span></div>
+        </Link>
+        <nav className="flex-1 space-y-1 px-3 py-6" aria-label="주 메뉴">
+          {nav.map((item) => {
+            const active = pathname === item.href;
+            return (
+              <Link key={item.href} href={item.href} className={cn("flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition", active ? "bg-violet-50 text-violet-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900")}>
+                <item.icon size={19} /><span className="flex-1">{item.label}</span>{item.badge ? <Badge className="bg-rose-500 text-white">{item.badge}</Badge> : null}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="m-4 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-700 p-4 text-white">
+          <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-violet-100"><Sparkles size={14} /> 이번 주 가족 목표</div>
+          <div className="text-2xl font-black">82%</div>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/20"><div className="h-full w-[82%] rounded-full bg-white" /></div>
+        </div>
+        <div className="flex items-center gap-3 border-t border-slate-100 p-4">
+          <span className="grid size-10 place-items-center rounded-full bg-amber-100 font-bold text-amber-700">{user.avatar}</span>
+          <div className="min-w-0 flex-1"><strong className="block truncate text-sm">{user.name}</strong><span className="block truncate text-xs text-slate-400">{user.detail}</span></div>
+          <Link href="/login" aria-label="로그아웃" className="text-slate-400 hover:text-slate-700"><LogOut size={18} /></Link>
+        </div>
+      </aside>
+
+      <div className="lg:pl-64">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur md:px-8 lg:h-20">
+          <div className="flex items-center gap-3"><button onClick={() => setMobileMenuOpen(true)} className="grid size-10 place-items-center rounded-xl text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="메뉴" aria-expanded={mobileMenuOpen}><Menu size={21} /></button><div className="hidden sm:block"><span className="text-xs font-medium text-slate-400">2026년 8월 6일 목요일</span><p className="text-sm font-bold">오늘도 한 걸음씩 자라요 🌱</p></div></div>
+          <div className="flex items-center gap-2">
+            {role === "parent" ? <Link href="/reviews" className="hidden items-center gap-1.5 rounded-full bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700 md:flex"><Sparkles size={14} /> AI 분석 2건</Link> : null}
+            <button className="relative grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" aria-label="알림"><Bell size={19} /><span className="absolute right-2 top-2 size-2 rounded-full bg-rose-500 ring-2 ring-white" /></button>
+            <Link href={role === "admin" ? "/admin/ai" : role === "parent" ? "/settings/privacy" : "/login"} className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600" aria-label="설정"><Settings size={19} /></Link>
+          </div>
+        </header>
+        <main className="mx-auto max-w-[1500px] px-4 py-6 pb-28 md:px-8 md:py-8 lg:pb-10">{children}</main>
+      </div>
+
+      {mobileMenuOpen ? <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true" aria-label="모바일 메뉴"><button className="absolute inset-0 bg-slate-950/30" aria-label="메뉴 닫기" onClick={() => setMobileMenuOpen(false)} /><div className="absolute inset-y-0 left-0 flex w-72 flex-col bg-white p-4 shadow-2xl"><div className="mb-5 flex items-center justify-between"><Link href="/" className="flex items-center gap-2 font-black" onClick={() => setMobileMenuOpen(false)}><span className="grid size-9 place-items-center rounded-xl bg-violet-600 text-white"><BookOpenCheck size={18} /></span>Sisters</Link><button onClick={() => setMobileMenuOpen(false)} className="grid size-9 place-items-center rounded-xl bg-slate-100" aria-label="메뉴 닫기">×</button></div><nav className="space-y-1" aria-label="모바일 전체 메뉴">{nav.map((item) => <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)} className={cn("flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold", pathname === item.href ? "bg-violet-50 text-violet-700" : "text-slate-600")}><item.icon size={19} /><span className="flex-1">{item.label}</span>{item.badge ? <Badge className="bg-rose-500 text-white">{item.badge}</Badge> : null}</Link>)}</nav></div></div> : null}
+
+      <nav className="fixed inset-x-0 bottom-0 z-50 flex justify-around border-t border-slate-200 bg-white/95 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden" aria-label="모바일 주 메뉴">
+        {nav.slice(0, 5).map((item) => {
+          const active = pathname === item.href;
+          return <Link key={item.href} href={item.href} className={cn("relative flex min-w-14 flex-col items-center gap-1 rounded-xl px-2 py-1.5 text-[11px] font-semibold", active ? "text-violet-700" : "text-slate-400")}><item.icon size={20} /><span>{item.label}</span>{item.badge ? <span className="absolute right-1 top-0 grid size-4 place-items-center rounded-full bg-rose-500 text-[9px] text-white">{item.badge}</span> : null}</Link>;
+        })}
+      </nav>
+    </div>
+  );
+}
