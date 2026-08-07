@@ -13,18 +13,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { ParentWorkspaceData } from "@/lib/auth/parent-workspace";
 
-export type ParentSection = "dashboard" | "planning" | "reviews" | "tests" | "reports";
+// "planning" is gone: /planning now renders the real PlanningWorkspace against
+// src/lib/data/planning.ts. This read-only fallback shrinks by one section each
+// time a slice gains its write path, and is deleted once all of them have.
+export type ParentSection = "dashboard" | "reviews" | "tests" | "reports";
 
 const sectionCopy: Record<ParentSection, { eyebrow: string; title: string; description: string }> = {
   dashboard: {
     eyebrow: "부모 대시보드",
     title: "오늘 학습 현황",
     description: "현재 가족 공간에 저장된 실제 데이터만 표시합니다.",
-  },
-  planning: {
-    eyebrow: "학습계획",
-    title: "강좌·교재·학습계획",
-    description: "등록한 강좌와 문제집, 확정된 계획을 확인합니다.",
   },
   reviews: {
     eyebrow: "제출검수",
@@ -158,21 +156,6 @@ export function LiveParentWorkspace({ section, data }: { section: ParentSection;
                 </div>
               </Card>
             </div>
-          )}
-
-          {section === "planning" && (
-            <section className="grid gap-4 md:grid-cols-3">
-              {[
-                { label: "등록 강좌", value: data.counts.courses, suffix: "개" },
-                { label: "등록 문제집", value: data.counts.workbooks, suffix: "권" },
-                { label: "학습계획", value: data.counts.plans, suffix: "개" },
-              ].map((item) => (
-                <Card key={item.label} className="p-6">
-                  <p className="text-sm font-bold text-slate-500">{item.label}</p>
-                  <strong className="mt-3 block text-3xl font-black">{item.value}{item.suffix}</strong>
-                </Card>
-              ))}
-            </section>
           )}
 
           {section === "reviews" && (

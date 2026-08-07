@@ -18,15 +18,15 @@
 - PortOne V2 보호자 본인확인 후 아동 개인정보·AI 처리 동의 기록
 - AI 키 AES-256-GCM 암호화 저장, 기능별 주/대체 공급자·모델 선택
 - 개인정보 내보내기·동의 철회·삭제 요청 접수
+- **강좌·문제집 등록과 학습계획 발행**: 목차 붙여넣기 → 회차 자동 분리 → 강좌 저장, 기간·요일·휴일·하루 최대량을 반영한 과제 자동배분 → 계획 발행(한 트랜잭션으로 계획+과제+버전 스냅샷 기록)
 - 부모/학생 읽기 전용 현황 화면(오늘 과제, 검수 대기, 테스트 목록, 승인 누계)
 - 목차 파싱·일정 배분·결정적 채점 순수 로직과 단위테스트
 - PWA manifest/service worker, 360px 모바일·태블릿·데스크톱 레이아웃
 
 ### 로드맵 (데모 모드에만 있거나 미구현)
 
-핵심 도메인의 **쓰기 경로가 아직 없습니다.** 운영 모드에서 강좌·문제집·학습계획·과제·제출물·테스트·문항·응시·알림은 조회만 되고 생성·수정되지 않습니다.
+계획·과제까지는 쓰기 경로가 생겼지만, **제출물·테스트·문항·응시·알림은 아직 조회만 됩니다.**
 
-- 엠베스트 목차 붙여넣기 → 강좌 저장, 월·주·일 자동배분 → 계획 발행 → 과제 생성 *(데모 전용)*
 - 학생 타이머·메모·사진 제출과 증빙별 제출 조건 *(데모 전용. 업로드 API는 Storage에만 저장하고 제출 레코드를 만들지 않음)*
 - AI 분석 후 부모 승인·반려, 재제출과 보완일 제안 *(데모 전용)*
 - 테스트 작성·발행, 학생 응시, 서버 채점 *(데모 전용. 말하기 문항은 데모에서 녹음 없이 정답이 자동 입력됨)*
@@ -41,7 +41,8 @@
 | 역할 | 경로 | 용도 | 상태 |
 | --- | --- | --- | --- |
 | 공통 | `/`, `/login` | 소개와 부모/학생/관리자 로그인 | 동작 |
-| 부모 | `/dashboard`, `/planning`, `/reviews`, `/tests`, `/reports` | 계획·검수·평가·통계 | 운영은 읽기 전용 |
+| 부모 | `/planning` | 강좌·문제집 등록과 학습계획 발행 | 동작 (등록·저장 가능) |
+| 부모 | `/dashboard`, `/reviews`, `/tests`, `/reports` | 현황·검수·평가·통계 | 운영은 읽기 전용 |
 | 학생 | `/student`, `/student/tests`, `/student/progress` | 오늘 학습·테스트·기록 | 운영은 읽기 전용 |
 | 관리자 | `/admin/ai` | AI 공급자·모델 설정 | 동작 |
 | 관리자 | `/admin`, `/admin/families`, `/admin/notifications` | 가족·작업 현황 | 스텁 (리다이렉트) |
@@ -64,13 +65,14 @@ npm run dev
 ## Production 연결
 
 1. Supabase 프로젝트를 만들고 `.env.example`의 URL·anon key·service role key를 설정합니다.
-2. `supabase/migrations/`의 마이그레이션을 파일명 순서대로 적용합니다(`202608060001_initial_schema.sql` → `202608070001_tighten_rls.sql`). 브라우저에 service role key를 노출하지 마세요.
+2. `supabase/migrations/`의 마이그레이션을 파일명 순서대로 적용합니다(`202608060001_initial_schema.sql` → `202608070001_tighten_rls.sql` → `202608070002_create_plan_with_tasks.sql`). 브라우저에 service role key를 노출하지 마세요.
 3. Supabase Auth에서 이메일 공급자를 활성화하고 운영 주소를 Site URL로, `https://운영주소/api/auth/callback`을 Redirect URL로 설정합니다. 현재 Vercel 운영 주소는 `https://sonsisters.vercel.app`입니다. Google과 Kakao는 각 공급자 키를 등록한 뒤 사용합니다.
 4. 최소 32자의 `STUDENT_SESSION_SECRET`과 base64 32바이트 `CREDENTIAL_ENCRYPTION_KEY`를 생성합니다.
 5. `NEXT_PUBLIC_DEMO_MODE=false`로 바꾼 뒤 최초 운영자 profile의 `role`을 `admin`으로 지정합니다.
 6. 운영자로 `/admin/ai`에 로그인해 OpenAI·Google 키와 기능별 모델을 저장합니다. 키는 AES-256-GCM으로 암호화되며 브라우저로 다시 반환되지 않습니다.
 7. PortOne store/channel/API secret, Resend, VAPID, SOLAPI 값과 승인된 알림톡 템플릿을 필요에 따라 설정합니다.
-8. Vercel에 `CRON_SECRET`을 설정합니다. Hobby 플랜 제한에 맞춰 `vercel.json`이 작업 큐를 매일 00:00 UTC(한국시간 09:00), 보존 삭제를 매일 03:15 UTC(한국시간 12:15)에 호출합니다.
+8. `vercel.json`은 함수 리전을 `icn1`(서울)로 고정합니다. Supabase 프로젝트를 다른 리전에 만들었다면 이 값을 DB와 같은 리전으로 바꾸세요 — 리전이 어긋나면 페이지마다 왕복 지연이 크게 늘어납니다.
+9. Vercel에 `CRON_SECRET`을 설정합니다. Hobby 플랜 제한에 맞춰 `vercel.json`이 작업 큐를 매일 00:00 UTC(한국시간 09:00), 보존 삭제를 매일 03:15 UTC(한국시간 12:15)에 호출합니다.
 
 환경변수의 OpenAI/Google 키는 초기 부트스트랩용 fallback입니다. 운영 중에는 관리자가 화면에서 공급자와 모델을 바꿀 수 있습니다. 기본 모델 목록에 없는 모델 ID도 직접 입력할 수 있습니다.
 
