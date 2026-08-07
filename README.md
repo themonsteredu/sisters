@@ -19,6 +19,7 @@
 - AI 키 AES-256-GCM 암호화 저장, 기능별 주/대체 공급자·모델 선택
 - 개인정보 내보내기·동의 철회·삭제 요청 접수
 - **강좌·문제집 등록과 학습계획 발행**: 목차 붙여넣기 → 회차 자동 분리 → 강좌 저장, 기간·요일·휴일·하루 최대량을 반영한 과제 자동배분 → 계획 발행(한 트랜잭션으로 계획+과제+버전 스냅샷 기록)
+- **학습지 자료 첨부**: 부모가 스캔한 종이 학습지(PDF·이미지, 개당 20MB)를 과제에 붙이면 학생이 오늘 할 일에서 열어 풀고 그 자리에서 제출
 - **학생 제출과 부모 검수**: 타이머·메모·사진 첨부 → 제출물·첨부 레코드 생성 및 과제 상태 전이 → 부모 승인/반려 → 반려 시 다음 학습 가능일에 보완 과제 자동 배정
 - **승인 제출물 원본 90일 보존 작업**: 첨부마다 `delete_after`를 기록하고 보존 크론이 만료분을 배치로 삭제
 - **테스트 작성·공개·응시·서버 채점**: 부모가 문항을 만들어 공개 → 학생 응시 → 서버에서 결정적 채점 후 응시 기록 저장, 서술형은 부모 검수로 분리. 응시 횟수 소진 시 자동 종료, 불합격 시 재시험 전환
@@ -75,7 +76,7 @@ npm run dev
 ## Production 연결
 
 1. Supabase 프로젝트를 만들고 `.env.example`의 URL·anon key·service role key를 설정합니다.
-2. `supabase/migrations/`의 마이그레이션을 파일명 순서대로 적용합니다(`202608060001_initial_schema.sql` → `202608070001_tighten_rls.sql` → `202608070002_create_plan_with_tasks.sql` → `202608070003_finalize_attempt.sql`). 브라우저에 service role key를 노출하지 마세요.
+2. `supabase/migrations/`의 마이그레이션을 파일명 순서대로 적용합니다(`202608060001_initial_schema.sql` → `202608070001_tighten_rls.sql` → `202608070002_create_plan_with_tasks.sql` → `202608070003_finalize_attempt.sql` → `202608070004_task_materials.sql`). 브라우저에 service role key를 노출하지 마세요.
 3. Supabase Auth에서 이메일 공급자를 활성화하고 운영 주소를 Site URL로, `https://운영주소/api/auth/callback`을 Redirect URL로 설정합니다. 현재 Vercel 운영 주소는 `https://sonsisters.vercel.app`입니다. Google과 Kakao는 각 공급자 키를 등록한 뒤 사용합니다.
 4. 최소 32자의 `STUDENT_SESSION_SECRET`과 base64 32바이트 `CREDENTIAL_ENCRYPTION_KEY`를 생성합니다.
 5. `NEXT_PUBLIC_DEMO_MODE=false`로 바꾼 뒤 최초 운영자 profile의 `role`을 `admin`으로 지정합니다.
@@ -111,6 +112,7 @@ npm run dev
 - `/api/ai/*`는 가족당 분당 20회로 제한
 - 업로드 형식/10MB 제한, 비공개 버킷
 - Storage 경로 첫 세그먼트가 가족 UUID(스토리지 정책이 이 값으로 인가), 조회는 단기 서명 URL
+- 학습지 자료는 별도 비공개 버킷(`sisters-materials`)에 보관 — 제출물 버킷은 승인 90일 뒤 삭제되므로 자료가 함께 지워지면 안 됨
 - 테스트 정답·대체정답·해설은 학생 응답에 절대 포함하지 않으며 채점은 서버에서만 수행
 - 보호 라우트는 `src/proxy.ts`의 세션 쿠키 게이트 + 페이지 로더의 실제 세션 검증 이중 방어
 - 관리자 화면과 API 이중 권한 검사

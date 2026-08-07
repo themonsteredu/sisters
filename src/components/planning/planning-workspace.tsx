@@ -9,6 +9,7 @@ import {
   ChevronRight,
   ClipboardPaste,
   Layers3,
+  Paperclip,
   Sparkles,
   UserPlus,
   WandSparkles,
@@ -22,6 +23,7 @@ import { Progress } from "@/components/ui/progress";
 import { createCourseAction, createPlanAction, createWorkbookAction } from "@/app/planning/actions";
 import { idleState, type ActionState } from "@/lib/forms/action-state";
 import { useFields } from "@/lib/forms/use-fields";
+import { TaskMaterials } from "./task-materials";
 import { parseCourseOutline } from "@/lib/domain/course-parser";
 import type { PlanningWorkspaceData } from "@/lib/data/planning";
 import { subjectDot, subjectTone } from "@/lib/utils";
@@ -122,6 +124,7 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
   const [notice, setNotice] = useState<ActionState>(idleState);
   // Phones show one day at a time. Defaults to the earliest day with work so
   // the panel is not empty on arrival.
+  const [materialTask, setMaterialTask] = useState<PlanningWorkspaceData["tasks"][number] | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(
     () => [...data.tasks].sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate))[0]?.scheduledDate ?? null,
   );
@@ -313,13 +316,21 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
                   <h3 className="text-sm font-black">{Number(selectedDate.slice(8))}일 과제 {(tasksByDate.get(selectedDate) ?? []).length}개</h3>
                   <div className="mt-3 space-y-2">
                     {(tasksByDate.get(selectedDate) ?? []).map((task) => (
-                      <div key={task.id} className="flex items-center gap-2 rounded-xl border border-slate-200 p-3">
+                      <button
+                        key={task.id}
+                        type="button"
+                        onClick={() => setMaterialTask(task)}
+                        className="flex w-full items-center gap-2 rounded-xl border border-slate-200 p-3 text-left"
+                      >
                         <Badge className={subjectTone(task.subject)}>{task.subject}</Badge>
                         <div className="min-w-0 flex-1">
                           <strong className="block truncate text-sm">{task.title}</strong>
                           <span className="text-xs text-slate-400">{studentName(task.studentId)} · {task.estimatedMinutes}분</span>
                         </div>
-                      </div>
+                        <span className="flex shrink-0 items-center gap-1 text-xs font-bold text-slate-400">
+                          <Paperclip size={13} />{task.materials.length}
+                        </span>
+                      </button>
                     ))}
                     {(tasksByDate.get(selectedDate) ?? []).length === 0 ? (
                       <p className="py-4 text-center text-sm text-slate-400">이 날은 배정된 과제가 없습니다.</p>
@@ -338,9 +349,15 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
                   {cell.day ? <span className="grid size-7 place-items-center rounded-full text-xs font-bold text-slate-600">{cell.day}</span> : null}
                   <div className="mt-1 space-y-1">
                     {cell.date ? tasksByDate.get(cell.date)?.map((task) => (
-                      <span key={task.id} className={`block truncate rounded-md px-2 py-1.5 text-left text-[10px] font-bold ${subjectTone(task.subject)}`} title={`${studentName(task.studentId)} · ${task.title}`}>
-                        <span className="opacity-60">{studentName(task.studentId)}</span> · {task.title}
-                      </span>
+                      <button
+                        key={task.id}
+                        type="button"
+                        onClick={() => setMaterialTask(task)}
+                        className={`block w-full truncate rounded-md px-2 py-1.5 text-left text-[10px] font-bold ${subjectTone(task.subject)}`}
+                        title={`${studentName(task.studentId)} · ${task.title} · 자료 ${task.materials.length}개`}
+                      >
+                        {task.materials.length ? "📎 " : ""}<span className="opacity-60">{studentName(task.studentId)}</span> · {task.title}
+                      </button>
                     )) : null}
                   </div>
                 </div>
@@ -388,6 +405,14 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
           </div>
         )}
       </Card>
+
+      {materialTask ? (
+        <TaskMaterials
+          task={materialTask}
+          studentName={studentName(materialTask.studentId)}
+          onClose={() => setMaterialTask(null)}
+        />
+      ) : null}
 
       {openModal === "course" && (
         <Modal title="강좌 등록" description="엠베스트 등 강의 목차를 붙여넣으면 회차로 자동 분리합니다." onClose={() => setOpenModal(null)}>

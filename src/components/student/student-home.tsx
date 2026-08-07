@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen, Camera, Check, CheckCircle2, ChevronRight, FileText, Flame, Headphones,
-  Lightbulb, Play, Send, Sparkles, Square, Timer, Trophy, Upload, X,
+  FileDown, Lightbulb, Play, Send, Sparkles, Square, Timer, Trophy, Upload, X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -178,6 +178,24 @@ export function StudentHome({ data }: { data: StudentHomeData }) {
                         </span>
                       ))}
                     </div>
+                    {task.materials.length ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {task.materials.map((material) => (
+                          material.url ? (
+                            <a
+                              key={material.id}
+                              href={material.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(event) => event.stopPropagation()}
+                              className="inline-flex items-center gap-1 rounded-lg bg-violet-50 px-2 py-1 text-[10px] font-bold text-violet-700 hover:bg-violet-100"
+                            >
+                              <FileDown size={11} /> {material.title}
+                            </a>
+                          ) : null
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                   {done ? (
                     <span className="grid size-10 place-items-center rounded-full bg-emerald-100 text-emerald-600"><Check size={21} /></span>
@@ -292,6 +310,28 @@ export function StudentHome({ data }: { data: StudentHomeData }) {
                   {running ? <Square size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
                 </button>
               </div>
+
+              {activeTask.materials.length ? (
+                <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-3">
+                  <h3 className="flex items-center gap-2 text-sm font-black text-violet-900"><FileDown size={16} /> 학습지</h3>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {activeTask.materials.map((material) => (
+                      material.url ? (
+                        <a
+                          key={material.id}
+                          href={material.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-bold text-violet-700 shadow-sm"
+                        >
+                          <FileDown size={13} /> {material.title}
+                        </a>
+                      ) : null
+                    ))}
+                  </div>
+                  <p className="mt-2 text-[11px] text-violet-700">새 탭에서 열립니다. 다 풀고 사진으로 제출해 주세요.</p>
+                </div>
+              ) : null}
 
               {requiresPhoto ? (
                 <div>

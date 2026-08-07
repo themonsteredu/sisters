@@ -3,6 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getParentContext } from "@/lib/data/context";
+import {
+  attachMaterial,
+  deleteMaterial,
+  materialMimeTypes,
+  materialStoragePath,
+  materialsBucket,
+  maxMaterialBytes,
+  maxMaterialsPerTask,
+  removeUploadedMaterials,
+} from "@/lib/data/materials";
 import { createCourse, createPlanWithTasks, createWorkbook } from "@/lib/data/planning";
 import { isDemoMode } from "@/lib/config";
 import { parseCourseOutline } from "@/lib/domain/course-parser";
@@ -112,6 +122,84 @@ export async function createWorkbookAction(_previous: ActionState, formData: For
   revalidatePath("/planning");
   revalidatePath("/dashboard");
   return { ok: true, message: `${parsed.data.title}을(를) 등록했습니다.` };
+}
+
+const materialSchema = z.object({
+  taskId: z.string().min(1, "과제를 찾을 수 없습니다."),
+  title: z.string().trim().max(120).optional(),
+});
+
+/** Attaches a parent-supplied worksheet (PDF or image) to a task. */
+export async function attachMaterialAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = materialSchema.safeParse({
+    taskId: formData.get("taskId"),
+    title: formData.get("title") || undefined,
+  });
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "입력 내용을 확인해 주세요.");
+
+  const files = formData.getAll("files").filter((entry): entry is File => entry instanceof File && entry.size > 0);
+  if (!files.length) return fail("파일을 선택해 주세요.");
+  if (files.length > maxMaterialsPerTask) return fail(`한 번에 최대 ${maxMaterialsPerTask}개까지 올릴 수 있습니다.`);
+  for (const file of files) {
+    if (!materialMimeTypes.has(file.type)) return fail("PDF 또는 이미지(JPG·PNG·WEBP)만 올릴 수 있습니다.");
+    if (file.size > maxMaterialBytes) return fail("파일 한 개가 20MB를 넘을 수 없습니다.");
+  }
+
+  if (isDemoMode) {
+    return { ok: true, message: `데모 모드입니다. 자료 ${files.length}개가 저장되지는 않습니다.` };
+  }
+
+  const context = await getParentContext();
+  if (!context.ok) return fail(context.message);
+
+  const uploaded: string[] = [];
+  try {
+    for (const file of files) {
+      const path = materialStoragePath(context.context, parsed.data.taskId, file.name);
+      const { error } = await context.context.supabase.storage
+        .from(materialsBucket)
+        .upload(path, await file.arrayBuffer(), { contentType: file.type, cacheControl: "3600", upsert: false });
+      if (error) throw error;
+      uploaded.push(path);
+
+      await attachMaterial(context.context, {
+        taskId: parsed.data.taskId,
+        title: parsed.data.title?.trim() || file.name,
+        mimeType: file.type,
+        sizeBytes: file.size,
+        storagePath: path,
+      });
+    }
+  } catch (error) {
+    await removeUploadedMaterials(uploaded);
+    logError("planning/attachMaterialAction", error, { taskId: parsed.data.taskId });
+    return fail(error instanceof Error && /할 일|최대|형식/.test(error.message) ? error.message : "자료를 올리지 못했습니다.");
+  }
+
+  revalidatePath("/planning");
+  revalidatePath("/student");
+  return { ok: true, message: `자료 ${files.length}개를 첨부했습니다. 학생 화면에서 열어볼 수 있습니다.` };
+}
+
+export async function deleteMaterialAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const materialId = String(formData.get("materialId") ?? "");
+  if (!materialId) return fail("자료를 찾을 수 없습니다.");
+
+  if (isDemoMode) return { ok: true, message: "데모 모드입니다. 삭제가 저장되지는 않습니다." };
+
+  const context = await getParentContext();
+  if (!context.ok) return fail(context.message);
+
+  try {
+    await deleteMaterial(context.context, materialId);
+  } catch (error) {
+    logError("planning/deleteMaterialAction", error, { materialId });
+    return fail("자료를 삭제하지 못했습니다.");
+  }
+
+  revalidatePath("/planning");
+  revalidatePath("/student");
+  return { ok: true, message: "자료를 삭제했습니다." };
 }
 
 const planSchema = z

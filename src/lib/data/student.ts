@@ -4,6 +4,7 @@ import { demoStudents, demoTasks, demoTests } from "@/lib/demo-data";
 import type { EvidenceKind, TaskStatus, TaskType } from "@/lib/domain/types";
 import { logError } from "@/lib/observability/log";
 import { getStudentContext, isDemoContext } from "./context";
+import { listMaterialsByTask, type TaskMaterial } from "./materials";
 
 export interface StudentTask {
   id: string;
@@ -15,6 +16,7 @@ export interface StudentTask {
   estimatedMinutes: number;
   status: TaskStatus;
   evidence: EvidenceKind[];
+  materials: TaskMaterial[];
 }
 
 export interface StudentUpcomingTest {
@@ -59,6 +61,7 @@ function demoData(): StudentHomeData {
         estimatedMinutes: task.estimatedMinutes,
         status: task.status,
         evidence: task.evidence,
+        materials: [],
       })),
     nextTest: test
       ? { id: test.id, title: test.title, questionCount: test.questions.length, timeLimitMinutes: test.timeLimitMinutes, passScore: test.passScore }
@@ -120,6 +123,22 @@ export async function loadStudentHome(): Promise<StudentHomeData> {
     ? ((firstTest.sisters_questions[0] as { count?: number } | undefined)?.count ?? 0)
     : 0;
 
+  const taskRows = (tasks.data ?? []).map((row) => ({
+    id: row.id,
+    subject: subjectName(row),
+    type: row.task_type as TaskType,
+    title: row.title,
+    detail: row.detail,
+    dueTime: row.due_time ? String(row.due_time).slice(0, 5) : null,
+    estimatedMinutes: row.estimated_minutes,
+    status: row.status as TaskStatus,
+    evidence: (Array.isArray(row.evidence_requirements) ? row.evidence_requirements : ["check"]) as EvidenceKind[],
+    materials: [] as TaskMaterial[],
+  }));
+
+  const materialsByTask = await listMaterialsByTask(result.context, taskRows.map((task) => task.id));
+  for (const task of taskRows) task.materials = materialsByTask.get(task.id) ?? [];
+
   return {
     demo: false,
     signedIn: true,
@@ -129,17 +148,7 @@ export async function loadStudentHome(): Promise<StudentHomeData> {
       avatar: student.data.avatar,
       streak: 0,
     },
-    tasks: (tasks.data ?? []).map((row) => ({
-      id: row.id,
-      subject: subjectName(row),
-      type: row.task_type as TaskType,
-      title: row.title,
-      detail: row.detail,
-      dueTime: row.due_time ? String(row.due_time).slice(0, 5) : null,
-      estimatedMinutes: row.estimated_minutes,
-      status: row.status as TaskStatus,
-      evidence: (Array.isArray(row.evidence_requirements) ? row.evidence_requirements : ["check"]) as EvidenceKind[],
-    })),
+    tasks: taskRows,
     nextTest: firstTest
       ? {
           id: firstTest.id,

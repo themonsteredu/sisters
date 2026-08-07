@@ -4,6 +4,7 @@ import { demoCourses, demoStudents, demoTasks, demoWorkbooks } from "@/lib/demo-
 import { logError } from "@/lib/observability/log";
 import { getParentContext, isDemoContext, type ParentContext } from "./context";
 import { recordAudit } from "./audit";
+import { listMaterialsByTask, type TaskMaterial } from "./materials";
 import { enqueueNotification } from "./notifications";
 
 export interface PlanningStudent {
@@ -55,6 +56,7 @@ export interface PlanningTask {
   scheduledDate: string;
   estimatedMinutes: number;
   status: string;
+  materials: TaskMaterial[];
 }
 
 export interface PlanningWorkspaceData {
@@ -118,6 +120,7 @@ function demoWorkspace(month: string): PlanningWorkspaceData {
       scheduledDate: task.scheduledDate,
       estimatedMinutes: task.estimatedMinutes,
       status: task.status,
+      materials: [],
     })),
   };
 }
@@ -178,6 +181,21 @@ export async function loadPlanningWorkspace(month = currentSeoulMonth()): Promis
     return (value as { count?: number } | null)?.count ?? 0;
   };
 
+  const taskRows = (tasks.data ?? []).map((row) => ({
+    id: row.id,
+    studentId: row.student_id,
+    subject: subjectName(row),
+    title: row.title,
+    scheduledDate: row.scheduled_date,
+    estimatedMinutes: row.estimated_minutes,
+    status: row.status,
+    materials: [] as TaskMaterial[],
+  }));
+
+  // One extra round-trip for the whole month rather than one per task.
+  const materialsByTask = await listMaterialsByTask(result.context, taskRows.map((task) => task.id));
+  for (const task of taskRows) task.materials = materialsByTask.get(task.id) ?? [];
+
   return {
     demo: false,
     hasFamily: true,
@@ -211,15 +229,7 @@ export async function loadPlanningWorkspace(month = currentSeoulMonth()): Promis
       status: row.status,
       taskCount: embeddedCount(row.sisters_tasks),
     })),
-    tasks: (tasks.data ?? []).map((row) => ({
-      id: row.id,
-      studentId: row.student_id,
-      subject: subjectName(row),
-      title: row.title,
-      scheduledDate: row.scheduled_date,
-      estimatedMinutes: row.estimated_minutes,
-      status: row.status,
-    })),
+    tasks: taskRows,
   };
 }
 
