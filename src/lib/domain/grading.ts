@@ -15,13 +15,19 @@ export function gradeDeterministicAnswer(question: TestQuestion, response: strin
     return { correct: false, earnedPoints: 0, needsParentReview: true };
   }
 
-  const expected = Array.isArray(question.answer) ? question.answer : [question.answer];
-  const accepted = [...expected, ...(question.acceptedAnswers ?? [])].map(normalizeAnswer);
+  const expected = (Array.isArray(question.answer) ? question.answer : [question.answer]).map(normalizeAnswer);
+  const accepted = [...expected, ...(question.acceptedAnswers ?? []).map(normalizeAnswer)];
   const provided = Array.isArray(response) ? response.map(normalizeAnswer) : [normalizeAnswer(response)];
+
+  // The arity check matters: without it a two-blank question answered with one
+  // blank passed `every` vacuously and scored full marks. Ordering compares
+  // against `expected` rather than `accepted`, because acceptedAnswers are
+  // alternatives, not extra positions in the sequence.
   const correct =
-    question.type === "ordering"
-      ? provided.length === accepted.length && provided.every((value, index) => value === accepted[index])
-      : provided.every((value) => accepted.includes(value));
+    provided.length === expected.length &&
+    (question.type === "ordering"
+      ? provided.every((value, index) => value === expected[index])
+      : provided.every((value) => accepted.includes(value)));
 
   return {
     correct,

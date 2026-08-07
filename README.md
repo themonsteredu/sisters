@@ -21,16 +21,18 @@
 - **강좌·문제집 등록과 학습계획 발행**: 목차 붙여넣기 → 회차 자동 분리 → 강좌 저장, 기간·요일·휴일·하루 최대량을 반영한 과제 자동배분 → 계획 발행(한 트랜잭션으로 계획+과제+버전 스냅샷 기록)
 - **학생 제출과 부모 검수**: 타이머·메모·사진 첨부 → 제출물·첨부 레코드 생성 및 과제 상태 전이 → 부모 승인/반려 → 반려 시 다음 학습 가능일에 보완 과제 자동 배정
 - **승인 제출물 원본 90일 보존 작업**: 첨부마다 `delete_after`를 기록하고 보존 크론이 만료분을 배치로 삭제
-- 부모/학생 읽기 전용 현황 화면(오늘 과제, 테스트 목록, 승인 누계)
+- **테스트 작성·공개·응시·서버 채점**: 부모가 문항을 만들어 공개 → 학생 응시 → 서버에서 결정적 채점 후 응시 기록 저장, 서술형은 부모 검수로 분리. 응시 횟수 소진 시 자동 종료, 불합격 시 재시험 전환
+- 부모/학생 읽기 전용 현황 화면(오늘 과제, 승인 누계)
 - 목차 파싱·일정 배분·결정적 채점 순수 로직과 단위테스트
 - PWA manifest/service worker, 360px 모바일·태블릿·데스크톱 레이아웃
 
 ### 로드맵 (데모 모드에만 있거나 미구현)
 
-계획·과제·제출·검수까지는 쓰기 경로가 생겼지만, **테스트·문항·응시·알림은 아직 조회만 됩니다.**
+계획·과제·제출·검수·테스트까지 쓰기 경로가 생겼습니다. 남은 것은 다음과 같습니다.
 
 - 제출물 AI 자동 분석 *(분석 결과 표시는 되지만, 제출 시 AI 작업을 큐에 넣는 생산자가 아직 없음)*
-- 테스트 작성·발행, 학생 응시, 서버 채점 *(데모 전용. 말하기 문항은 데모에서 녹음 없이 정답이 자동 입력됨)*
+- 말하기·듣기 문항의 실제 녹음과 음성 인식 *(`transcribeSpeech`는 구현되어 있으나 호출하는 곳이 없음. 현재 말하기 문항은 텍스트 입력으로 응시)*
+- 서술형 문항의 부모 채점 화면 *(응시 기록에 `needs_parent_review`로 표시만 되고, 점수를 매기는 화면이 아직 없음)*
 - 자녀별 정시율·학습시간·점수·취약영역 리포트 *(미구현. 현재 `/reports`는 승인율만 표시)*
 - 앱 알림·웹푸시·Resend 이메일·SOLAPI 알림톡 *(크론 소비자는 있으나 큐에 넣는 생산자가 없음)*
 - 관리자 가족·작업 현황 화면 *(`/admin/families`, `/admin/notifications`는 `/admin/ai`로 리다이렉트하는 스텁)*
@@ -43,9 +45,11 @@
 | 공통 | `/`, `/login` | 소개와 부모/학생/관리자 로그인 | 동작 |
 | 부모 | `/planning` | 강좌·문제집 등록과 학습계획 발행 | 동작 (등록·저장 가능) |
 | 부모 | `/reviews` | 제출물 검수와 승인·반려 | 동작 (승인·반려 저장) |
-| 부모 | `/dashboard`, `/tests`, `/reports` | 현황·평가·통계 | 운영은 읽기 전용 |
+| 부모 | `/tests` | 테스트 작성·공개와 응시 현황 | 동작 (작성·공개 저장) |
+| 부모 | `/dashboard`, `/reports` | 현황·통계 | 운영은 읽기 전용 |
 | 학생 | `/student` | 오늘 학습, 타이머·메모·사진 제출 | 동작 (제출 저장) |
-| 학생 | `/student/tests`, `/student/progress` | 테스트·기록 | 운영은 읽기 전용 |
+| 학생 | `/student/tests` | 테스트 응시 | 동작 (응시 기록 저장) |
+| 학생 | `/student/progress` | 학습 기록 | 운영은 읽기 전용 |
 | 관리자 | `/admin/ai` | AI 공급자·모델 설정 | 동작 |
 | 관리자 | `/admin`, `/admin/families`, `/admin/notifications` | 가족·작업 현황 | 스텁 (리다이렉트) |
 | 개인정보 | `/onboarding`, `/settings/privacy`, `/settings/admin-pin` | 보호자 동의와 데이터 권리 요청 | 동작 |
@@ -67,7 +71,7 @@ npm run dev
 ## Production 연결
 
 1. Supabase 프로젝트를 만들고 `.env.example`의 URL·anon key·service role key를 설정합니다.
-2. `supabase/migrations/`의 마이그레이션을 파일명 순서대로 적용합니다(`202608060001_initial_schema.sql` → `202608070001_tighten_rls.sql` → `202608070002_create_plan_with_tasks.sql`). 브라우저에 service role key를 노출하지 마세요.
+2. `supabase/migrations/`의 마이그레이션을 파일명 순서대로 적용합니다(`202608060001_initial_schema.sql` → `202608070001_tighten_rls.sql` → `202608070002_create_plan_with_tasks.sql` → `202608070003_finalize_attempt.sql`). 브라우저에 service role key를 노출하지 마세요.
 3. Supabase Auth에서 이메일 공급자를 활성화하고 운영 주소를 Site URL로, `https://운영주소/api/auth/callback`을 Redirect URL로 설정합니다. 현재 Vercel 운영 주소는 `https://sonsisters.vercel.app`입니다. Google과 Kakao는 각 공급자 키를 등록한 뒤 사용합니다.
 4. 최소 32자의 `STUDENT_SESSION_SECRET`과 base64 32바이트 `CREDENTIAL_ENCRYPTION_KEY`를 생성합니다.
 5. `NEXT_PUBLIC_DEMO_MODE=false`로 바꾼 뒤 최초 운영자 profile의 `role`을 `admin`으로 지정합니다.
@@ -102,7 +106,8 @@ npm run dev
 - 상태 변경 요청에 동일 출처 증명 필수(`Origin` 없으면 `Sec-Fetch-Site` 폴백, 둘 다 없으면 거부)
 - `/api/ai/*`는 가족당 분당 20회로 제한
 - 업로드 형식/10MB 제한, 비공개 버킷
-- Storage 경로에 가족/학생/과제 ID 사용, 서명 URL 전제
+- Storage 경로 첫 세그먼트가 가족 UUID(스토리지 정책이 이 값으로 인가), 조회는 단기 서명 URL
+- 테스트 정답·대체정답·해설은 학생 응답에 절대 포함하지 않으며 채점은 서버에서만 수행
 - 보호 라우트는 `src/proxy.ts`의 세션 쿠키 게이트 + 페이지 로더의 실제 세션 검증 이중 방어
 - 관리자 화면과 API 이중 권한 검사
 - 알림 `(notification_id, channel)` 유일키와 작업 점유로 재시도 중복 방지
@@ -120,7 +125,7 @@ npm run lint
 npm run build
 ```
 
-단위테스트는 목차 파싱, 휴일/요일/마감 충돌을 반영한 일정 배분, 결정적 채점, API 키 암복호화, 동일 출처 검사, 레이트 리밋을 검증합니다.
+단위테스트는 목차 파싱, 휴일/요일/마감 충돌을 반영한 일정 배분, 결정적 채점(부분 응답·순서 문항·대체 정답 포함), 계획 과제 생성, 제출 첨부 경로 규칙, API 키 암복호화, 동일 출처 검사, 레이트 리밋을 검증합니다.
 
 GitHub Actions(`.github/workflows/ci.yml`)가 push와 PR마다 위 명령을 모두 실행합니다.
 

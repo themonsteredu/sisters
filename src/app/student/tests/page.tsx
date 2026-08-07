@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
 import { AppShell } from "@/components/shell/app-shell";
 import { StudentTestRunner } from "@/components/student/student-test-runner";
-import { LiveStudentWorkspace } from "@/components/student/live-student-workspace";
-import { requireStudentWorkspace } from "@/lib/auth/student-workspace";
-import { isDemoMode } from "@/lib/config";
+import { loadStudentTestData } from "@/lib/data/test-workspace";
 
-export const metadata: Metadata = { title: "영어 단어 테스트" };
+export const metadata: Metadata = { title: "테스트" };
+export const dynamic = "force-dynamic";
 
 export default async function StudentTestsPage() {
-  if (isDemoMode) return <AppShell role="student"><StudentTestRunner /></AppShell>;
+  const data = await loadStudentTestData();
 
-  const data = await requireStudentWorkspace();
-  return <AppShell role="student" user={{ name: data.student.name, detail: `${data.student.grade}학년` }}><LiveStudentWorkspace data={data} section="tests" /></AppShell>;
+  return (
+    <AppShell role="student">
+      <StudentTestRunner data={data} />
+    </AppShell>
+  );
 }

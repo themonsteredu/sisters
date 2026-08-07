@@ -4,7 +4,6 @@ import {
   CalendarDays,
   CheckCircle2,
   ClipboardCheck,
-  FileQuestion,
   GraduationCap,
   UserPlus,
   Users,
@@ -13,21 +12,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { ParentWorkspaceData } from "@/lib/auth/parent-workspace";
 
-// "planning" and "reviews" are gone: those routes now render their real
-// workspaces against src/lib/data/*. This read-only fallback shrinks by one
-// section each time a slice gains its write path, and is deleted once all have.
-export type ParentSection = "dashboard" | "tests" | "reports";
+// Only the dashboard and reports still fall back here; planning, reviews and
+// tests render their real workspaces against src/lib/data/*. This shrinks by
+// one section per slice and is deleted once reports gains its own loader.
+export type ParentSection = "dashboard" | "reports";
 
 const sectionCopy: Record<ParentSection, { eyebrow: string; title: string; description: string }> = {
   dashboard: {
     eyebrow: "부모 대시보드",
     title: "오늘 학습 현황",
     description: "현재 가족 공간에 저장된 실제 데이터만 표시합니다.",
-  },
-  tests: {
-    eyebrow: "테스트",
-    title: "예정·최근 테스트",
-    description: "가족 공간에 등록된 테스트와 합격 기준을 확인합니다.",
   },
   reports: {
     eyebrow: "학습 리포트",
@@ -151,24 +145,6 @@ export function LiveParentWorkspace({ section, data }: { section: ParentSection;
                 </div>
               </Card>
             </div>
-          )}
-
-          {section === "tests" && (
-            <Card className="overflow-hidden">
-              <div className="border-b border-slate-100 p-5"><h2 className="font-black">등록된 테스트</h2></div>
-              <div className="divide-y divide-slate-100">
-                {data.tests.length ? data.tests.map((test) => (
-                  <div key={test.id} className="flex items-center gap-3 p-4">
-                    <FileQuestion size={18} className="text-blue-600" />
-                    <div className="min-w-0 flex-1">
-                      <strong className="block truncate text-sm">{test.title}</strong>
-                      <span className="text-xs text-slate-400">{studentName(data, test.studentId)} · {test.scheduledDate}</span>
-                    </div>
-                    <Badge>{test.status} · {test.passScore}점</Badge>
-                  </div>
-                )) : <p className="p-8 text-center text-sm text-slate-400">등록된 테스트가 없습니다.</p>}
-              </div>
-            </Card>
           )}
 
           {section === "reports" && (
