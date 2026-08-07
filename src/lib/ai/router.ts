@@ -3,6 +3,7 @@ import { createGoogle } from "@ai-sdk/google";
 import { generateText, Output, transcribe } from "ai";
 import type { z } from "zod";
 import type { AICapability, AIModelSelection, AIProviderName } from "@/lib/domain/types";
+import { logError } from "@/lib/observability/log";
 import { getModelSelection, getProviderKey } from "./settings";
 
 export class AIUnavailableError extends Error {
@@ -34,6 +35,21 @@ async function executeStructured<T>(
   return result.output;
 }
 
+// A missing or rejected key will fail identically on every attempt, so retrying
+// it only burns the budget before the fallback gets its turn.
+function isRetryable(error: unknown) {
+  return !(error instanceof AIUnavailableError);
+}
+
+const primaryAttempts = 2;
+const retryBaseDelayMs = 400;
+
+function backoffDelay(attempt: number) {
+  // Exponential with jitter so concurrent jobs do not retry in lockstep.
+  const ceiling = retryBaseDelayMs * 2 ** attempt;
+  return ceiling / 2 + Math.random() * (ceiling / 2);
+}
+
 export async function runStructuredAI<T>(options: {
   capability: AICapability;
   schema: z.ZodType<T>;
@@ -43,12 +59,22 @@ export async function runStructuredAI<T>(options: {
   const selection = await getModelSelection(options.capability, options.familyId);
   let lastError: unknown;
 
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (let attempt = 0; attempt < primaryAttempts; attempt += 1) {
     try {
       const output = await executeStructured(selection, options.schema, options.prompt, options.familyId);
       return { output, provider: selection.primaryProvider, model: selection.primaryModel, usedFallback: false };
     } catch (error) {
       lastError = error;
+      logError("ai/router", error, {
+        capability: options.capability,
+        provider: selection.primaryProvider,
+        model: selection.primaryModel,
+        attempt: attempt + 1,
+      });
+      if (!isRetryable(error)) break;
+      if (attempt + 1 < primaryAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, backoffDelay(attempt)));
+      }
     }
   }
 
@@ -62,6 +88,12 @@ export async function runStructuredAI<T>(options: {
       return { output, provider: fallback.primaryProvider, model: fallback.primaryModel, usedFallback: true };
     } catch (error) {
       lastError = error;
+      logError("ai/router", error, {
+        capability: options.capability,
+        provider: selection.fallbackProvider,
+        model: selection.fallbackModel,
+        stage: "fallback",
+      });
     }
   }
 

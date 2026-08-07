@@ -8,7 +8,9 @@ import { Card } from "@/components/ui/card";
 
 type RequestType = "export" | "delete" | "withdraw_consent";
 
-export function PrivacySettings({ familyId, publicPushKey }: { familyId: string; publicPushKey?: string }) {
+// The family is resolved from the session server-side, so it is intentionally
+// not a prop and never travels in a request body.
+export function PrivacySettings({ publicPushKey }: { publicPushKey?: string }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -19,7 +21,7 @@ export function PrivacySettings({ familyId, publicPushKey }: { familyId: string;
       const response = await fetch("/api/account/data-request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ familyId, requestType }),
+        body: JSON.stringify({ requestType }),
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(data.error ?? "요청을 접수하지 못했습니다.");
@@ -45,7 +47,7 @@ export function PrivacySettings({ familyId, publicPushKey }: { familyId: string;
       const response = await fetch("/api/notifications/push-subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ familyId, endpoint: json.endpoint, keys: json.keys }),
+        body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
       });
       if (!response.ok) throw new Error("푸시 구독을 저장하지 못했습니다.");
       setMessage("이 기기에서 학습 알림을 받을 수 있습니다.");
