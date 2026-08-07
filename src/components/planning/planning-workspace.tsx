@@ -24,7 +24,7 @@ import { idleState, type ActionState } from "@/lib/forms/action-state";
 import { useFields } from "@/lib/forms/use-fields";
 import { parseCourseOutline } from "@/lib/domain/course-parser";
 import type { PlanningWorkspaceData } from "@/lib/data/planning";
-import { subjectTone } from "@/lib/utils";
+import { subjectDot, subjectTone } from "@/lib/utils";
 
 const weekdayLabels = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -120,6 +120,11 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
   const [openModal, setOpenModal] = useState<null | "course" | "workbook" | "plan">(null);
   const [weekdays, setWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [notice, setNotice] = useState<ActionState>(idleState);
+  // Phones show one day at a time. Defaults to the earliest day with work so
+  // the panel is not empty on arrival.
+  const [selectedDate, setSelectedDate] = useState<string | null>(
+    () => [...data.tasks].sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate))[0]?.scheduledDate ?? null,
+  );
 
   const firstStudent = data.students[0]?.id ?? "";
   const firstSubject = data.subjects[0]?.id ?? "";
@@ -261,31 +266,90 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
         </div>
 
         {view === "calendar" ? (
-          <div className="overflow-x-auto">
-            <div className="min-w-[760px]">
-              <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50">
-                {weekdayLabels.map((day, index) => (
-                  <div key={day} className={`p-3 text-center text-xs font-bold ${index === 0 ? "text-rose-400" : index === 6 ? "text-blue-400" : "text-slate-400"}`}>{day}</div>
-                ))}
-              </div>
-              <div className="grid grid-cols-7">
-                {calendar.map((cell, index) => (
-                  <div key={index} className="min-h-28 border-b border-r border-slate-100 bg-white p-2">
-                    {cell.day ? <span className="grid size-7 place-items-center rounded-full text-xs font-bold text-slate-600">{cell.day}</span> : null}
-                    <div className="mt-1 space-y-1">
-                      {cell.date ? tasksByDate.get(cell.date)?.map((task) => (
-                        <span key={task.id} className={`block truncate rounded-md px-2 py-1.5 text-left text-[10px] font-bold ${subjectTone(task.subject)}`} title={`${studentName(task.studentId)} · ${task.title}`}>
-                          <span className="opacity-60">{studentName(task.studentId)}</span> · {task.title}
-                        </span>
-                      )) : null}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {data.tasks.length === 0 ? (
-                <p className="p-8 text-center text-sm text-slate-400">이 달에 배정된 과제가 없습니다. 학습계획을 만들어 보세요.</p>
-              ) : null}
+          <div>
+            <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50">
+              {weekdayLabels.map((day, index) => (
+                <div key={day} className={`p-2 text-center text-[11px] font-bold md:p-3 md:text-xs ${index === 0 ? "text-rose-400" : index === 6 ? "text-blue-400" : "text-slate-400"}`}>{day}</div>
+              ))}
             </div>
+
+            {/*
+              Phones get a compact grid of day numbers with subject dots; tapping
+              a day lists it below. The previous single layout was locked to
+              min-w-[760px] inside overflow-x-auto, so a 360px screen could only
+              scroll sideways through it.
+            */}
+            <div className="grid grid-cols-7 md:hidden">
+              {calendar.map((cell, index) => {
+                const dayTasks = cell.date ? tasksByDate.get(cell.date) ?? [] : [];
+                const isSelected = cell.date !== null && cell.date === selectedDate;
+                if (!cell.day) return <div key={index} className="min-h-14 border-b border-r border-slate-100 bg-slate-50/40" />;
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => setSelectedDate(cell.date)}
+                    aria-pressed={isSelected}
+                    aria-label={`${cell.day}일, 과제 ${dayTasks.length}개`}
+                    className={`min-h-14 border-b border-r border-slate-100 p-1 text-center ${isSelected ? "bg-violet-50" : "bg-white"}`}
+                  >
+                    <span className={`mx-auto grid size-7 place-items-center rounded-full text-xs font-bold ${isSelected ? "bg-violet-600 text-white" : "text-slate-600"}`}>
+                      {cell.day}
+                    </span>
+                    <span className="mt-1 flex flex-wrap justify-center gap-0.5">
+                      {dayTasks.slice(0, 4).map((task) => (
+                        <span key={task.id} className={`size-1.5 rounded-full ${subjectDot(task.subject)}`} />
+                      ))}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Selected-day detail, phones only. */}
+            <div className="border-t border-slate-100 p-4 md:hidden">
+              {selectedDate ? (
+                <>
+                  <h3 className="text-sm font-black">{Number(selectedDate.slice(8))}일 과제 {(tasksByDate.get(selectedDate) ?? []).length}개</h3>
+                  <div className="mt-3 space-y-2">
+                    {(tasksByDate.get(selectedDate) ?? []).map((task) => (
+                      <div key={task.id} className="flex items-center gap-2 rounded-xl border border-slate-200 p-3">
+                        <Badge className={subjectTone(task.subject)}>{task.subject}</Badge>
+                        <div className="min-w-0 flex-1">
+                          <strong className="block truncate text-sm">{task.title}</strong>
+                          <span className="text-xs text-slate-400">{studentName(task.studentId)} · {task.estimatedMinutes}분</span>
+                        </div>
+                      </div>
+                    ))}
+                    {(tasksByDate.get(selectedDate) ?? []).length === 0 ? (
+                      <p className="py-4 text-center text-sm text-slate-400">이 날은 배정된 과제가 없습니다.</p>
+                    ) : null}
+                  </div>
+                </>
+              ) : (
+                <p className="py-2 text-center text-sm text-slate-400">날짜를 선택하면 과제를 볼 수 있어요.</p>
+              )}
+            </div>
+
+            {/* Full grid from md up, where the columns have room for chips. */}
+            <div className="hidden grid-cols-7 md:grid">
+              {calendar.map((cell, index) => (
+                <div key={index} className="min-h-28 border-b border-r border-slate-100 bg-white p-2">
+                  {cell.day ? <span className="grid size-7 place-items-center rounded-full text-xs font-bold text-slate-600">{cell.day}</span> : null}
+                  <div className="mt-1 space-y-1">
+                    {cell.date ? tasksByDate.get(cell.date)?.map((task) => (
+                      <span key={task.id} className={`block truncate rounded-md px-2 py-1.5 text-left text-[10px] font-bold ${subjectTone(task.subject)}`} title={`${studentName(task.studentId)} · ${task.title}`}>
+                        <span className="opacity-60">{studentName(task.studentId)}</span> · {task.title}
+                      </span>
+                    )) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {data.tasks.length === 0 ? (
+              <p className="hidden p-8 text-center text-sm text-slate-400 md:block">이 달에 배정된 과제가 없습니다. 학습계획을 만들어 보세요.</p>
+            ) : null}
           </div>
         ) : (
           <div className="grid gap-5 p-5 lg:grid-cols-2">

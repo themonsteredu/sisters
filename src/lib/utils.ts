@@ -30,3 +30,15 @@ export function statusLabel(status: string) {
   };
   return labels[status] ?? status;
 }
+
+/** Solid dot colour for compact views, where subjectTone's -100 shade is too faint. */
+export function subjectDot(subject: string) {
+  const dots: Record<string, string> = {
+    영어: "bg-violet-500",
+    수학: "bg-blue-500",
+    국어: "bg-rose-500",
+    과학: "bg-emerald-500",
+    역사: "bg-amber-500",
+  };
+  return dots[subject] ?? "bg-slate-400";
+}
