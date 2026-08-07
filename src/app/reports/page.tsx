@@ -1,20 +1,25 @@
 import type { Metadata } from "next";
-import { LiveParentWorkspace } from "@/components/dashboard/live-parent-workspace";
-import { ParentDashboard } from "@/components/dashboard/parent-dashboard";
+import { ReportsView } from "@/components/reports/reports-view";
 import { AppShell } from "@/components/shell/app-shell";
-import { requireParentWorkspace } from "@/lib/auth/parent-workspace";
+import { getParentSession } from "@/lib/auth/guard";
 import { isDemoMode } from "@/lib/config";
+import { loadReports } from "@/lib/data/reports";
 
 export const metadata: Metadata = { title: "학습 리포트" };
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
-  if (isDemoMode) return <AppShell><ParentDashboard /></AppShell>;
+  const [data, session] = await Promise.all([
+    loadReports(),
+    isDemoMode ? Promise.resolve(null) : getParentSession(),
+  ]);
 
-  const data = await requireParentWorkspace();
   return (
-    <AppShell user={{ name: data.profile.displayName, detail: data.family?.name ?? "가족 미설정" }}>
-      <LiveParentWorkspace section="reports" data={data} />
+    <AppShell
+      role="parent"
+      user={session ? { name: session.displayName ?? "부모님", detail: session.familyId ? "가족 학습 관리자" : "가족 미설정" } : undefined}
+    >
+      <ReportsView data={data} />
     </AppShell>
   );
 }

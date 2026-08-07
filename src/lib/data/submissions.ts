@@ -4,8 +4,10 @@ import { randomUUID } from "node:crypto";
 import { logError } from "@/lib/observability/log";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { buildSubmissionStoragePath } from "@/lib/uploads/storage-path";
+import { enqueueAIJob } from "./ai-jobs";
 import { recordAudit } from "./audit";
 import type { ParentContext, StudentContext } from "./context";
+import { enqueueNotification } from "./notifications";
 
 export const storageBucket = "sisters-submissions";
 
@@ -99,12 +101,42 @@ export async function createSubmission(context: StudentContext, input: CreateSub
     }
   }
 
-  const { error: taskError } = await supabase
+  const { data: task2 } = await supabase
     .from("sisters_tasks")
     .update({ status: input.nextTaskStatus, updated_at: new Date().toISOString() })
     .eq("id", input.taskId)
-    .eq("family_id", familyId);
-  if (taskError) logError("data/submissions.createSubmission", taskError, { taskId: input.taskId });
+    .eq("family_id", familyId)
+    .select("title")
+    .maybeSingle();
+
+  // Tell the parents there is something to review, and queue the photo
+  // analysis. Neither is allowed to fail the submission itself.
+  const [{ data: members }, { data: student }] = await Promise.all([
+    supabase.from("sisters_family_members").select("user_id").eq("family_id", familyId).limit(10),
+    supabase.from("sisters_students").select("name").eq("id", studentId).maybeSingle(),
+  ]);
+
+  await Promise.all(
+    (members ?? []).map((member) =>
+      enqueueNotification({
+        familyId,
+        eventType: "submission_created",
+        title: "새 학습 제출",
+        body: `${student?.name ?? "학생"} · ${task2?.title ?? "학습"} 제출물이 검수를 기다립니다.`,
+        recipientUserId: member.user_id,
+        dedupeKey: `submission:${submission.id}:review:${member.user_id}`,
+        channels: ["in_app", "web_push"],
+      }),
+    ),
+  );
+
+  if (input.assets.some((asset) => asset.kind === "image")) {
+    await enqueueAIJob({
+      familyId,
+      capability: "analyzeSubmission",
+      payload: { submissionId: submission.id, taskId: input.taskId, context: task2?.title ?? "학습 제출물" },
+    });
+  }
 
   return submission.id as string;
 }
@@ -299,12 +331,25 @@ export async function recordDecision(context: ParentContext, input: DecisionInpu
     }
   }
 
-  await recordAudit(context, {
-    action: input.decision === "approved" ? "submission_approved" : "submission_rejected",
-    entityType: "submission",
-    entityId: input.submissionId,
-    metadata: { taskId: submission.task_id, remediationTaskId },
-  });
+  await Promise.all([
+    recordAudit(context, {
+      action: input.decision === "approved" ? "submission_approved" : "submission_rejected",
+      entityType: "submission",
+      entityId: input.submissionId,
+      metadata: { taskId: submission.task_id, remediationTaskId },
+    }),
+    // The student has no user account, so this is an in-app notification only;
+    // the external channels have no address to deliver to.
+    enqueueNotification({
+      familyId,
+      eventType: "review_decided",
+      title: input.decision === "approved" ? "학습이 승인되었어요" : "학습을 다시 확인해 주세요",
+      body: input.feedback?.trim() || (input.decision === "approved" ? "부모님이 학습을 승인했어요." : "부모님이 보완을 요청했어요."),
+      recipientStudentId: submission.student_id,
+      dedupeKey: `submission:${input.submissionId}:decision`,
+      channels: ["in_app"],
+    }),
+  ]);
 
   return { remediationTaskId };
 }

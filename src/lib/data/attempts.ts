@@ -3,6 +3,7 @@ import "server-only";
 import { calculateScore, gradeDeterministicAnswer } from "@/lib/domain/grading";
 import { logError } from "@/lib/observability/log";
 import type { StudentContext } from "./context";
+import { enqueueNotification } from "./notifications";
 import { loadGradableQuestions } from "./tests";
 
 /** Question types a machine cannot settle; they always go to the parent. */
@@ -80,6 +81,28 @@ export async function finalizeAttempt(
   }
 
   const result = data as { attempt_id: string; attempt_number: number; attempts_remaining: number };
+
+  // Free-response answers need a parent; a fail with attempts left does not.
+  if (needsParentReview) {
+    const { data: members } = await supabase
+      .from("sisters_family_members")
+      .select("user_id")
+      .eq("family_id", familyId)
+      .limit(10);
+    await Promise.all(
+      (members ?? []).map((member) =>
+        enqueueNotification({
+          familyId,
+          eventType: "test_review",
+          title: "서술형 채점이 필요합니다",
+          body: `자동 채점 ${score}점. 서술형 문항을 확인해 주세요.`,
+          recipientUserId: member.user_id,
+          dedupeKey: `attempt:${result.attempt_id}:review:${member.user_id}`,
+          channels: ["in_app", "web_push"],
+        }),
+      ),
+    );
+  }
 
   return {
     attemptId: result.attempt_id,

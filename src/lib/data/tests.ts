@@ -4,6 +4,7 @@ import type { QuestionType, TestQuestion } from "@/lib/domain/types";
 import { logError } from "@/lib/observability/log";
 import { recordAudit } from "./audit";
 import type { ParentContext, StudentContext } from "./context";
+import { enqueueNotification } from "./notifications";
 
 /** Columns that must never be sent to a student's browser. */
 const secretQuestionColumns = ["answer", "accepted_answers", "explanation"] as const;
@@ -177,15 +178,30 @@ export async function publishTest(context: ParentContext, testId: string) {
     .eq("family_id", familyId);
   if (!count) throw new Error("문항이 없는 테스트는 공개할 수 없습니다.");
 
-  const { error } = await supabase
+  const { data: test, error } = await supabase
     .from("sisters_tests")
     .update({ status: "published" })
     .eq("id", testId)
     .eq("family_id", familyId)
-    .eq("status", "draft");
+    .eq("status", "draft")
+    .select("student_id, title")
+    .maybeSingle();
   if (error) throw error;
 
-  await recordAudit(context, { action: "test_published", entityType: "test", entityId: testId });
+  await Promise.all([
+    recordAudit(context, { action: "test_published", entityType: "test", entityId: testId }),
+    test
+      ? enqueueNotification({
+          familyId,
+          eventType: "test_published",
+          title: "새 테스트가 열렸어요",
+          body: `${test.title} · ${count}문항`,
+          recipientStudentId: test.student_id,
+          dedupeKey: `test:${testId}:published`,
+          channels: ["in_app"],
+        })
+      : Promise.resolve(null),
+  ]);
 }
 
 /**

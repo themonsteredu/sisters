@@ -4,6 +4,7 @@ import { demoCourses, demoStudents, demoTasks, demoWorkbooks } from "@/lib/demo-
 import { logError } from "@/lib/observability/log";
 import { getParentContext, isDemoContext, type ParentContext } from "./context";
 import { recordAudit } from "./audit";
+import { enqueueNotification } from "./notifications";
 
 export interface PlanningStudent {
   id: string;
@@ -353,12 +354,23 @@ export async function createPlanWithTasks(context: ParentContext, input: CreateP
   }
 
   const planId = data as string;
-  await recordAudit(context, {
-    action: "plan_published",
-    entityType: "plan",
-    entityId: planId,
-    metadata: { taskCount: input.tasks.length, periodStart: input.periodStart, periodEnd: input.periodEnd },
-  });
+  await Promise.all([
+    recordAudit(context, {
+      action: "plan_published",
+      entityType: "plan",
+      entityId: planId,
+      metadata: { taskCount: input.tasks.length, periodStart: input.periodStart, periodEnd: input.periodEnd },
+    }),
+    enqueueNotification({
+      familyId,
+      eventType: "plan_published",
+      title: "새 학습계획이 도착했어요",
+      body: `${input.title} · ${input.tasks.length}일치 과제가 배정되었습니다.`,
+      recipientStudentId: input.studentId,
+      dedupeKey: `plan:${planId}:published`,
+      channels: ["in_app"],
+    }),
+  ]);
 
   return planId;
 }

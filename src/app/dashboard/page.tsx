@@ -1,20 +1,32 @@
 import type { Metadata } from "next";
-import { AppShell } from "@/components/shell/app-shell";
 import { ParentDashboard } from "@/components/dashboard/parent-dashboard";
-import { LiveParentWorkspace } from "@/components/dashboard/live-parent-workspace";
-import { requireParentWorkspace } from "@/lib/auth/parent-workspace";
+import { AppShell } from "@/components/shell/app-shell";
+import { getParentSession } from "@/lib/auth/guard";
 import { isDemoMode } from "@/lib/config";
+import { loadDashboard } from "@/lib/data/dashboard";
+import { loadUnreadSummary } from "@/lib/data/notifications";
 
-export const metadata: Metadata = { title: "부모 대시보드" };
+export const metadata: Metadata = { title: "대시보드" };
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  if (isDemoMode) return <AppShell><ParentDashboard /></AppShell>;
+  const [data, session] = await Promise.all([
+    loadDashboard(),
+    isDemoMode ? Promise.resolve(null) : getParentSession(),
+  ]);
 
-  const data = await requireParentWorkspace();
+  const summary = session?.familyId
+    ? await loadUnreadSummary(session.familyId, session.actor.id)
+    : { unread: 0, pendingReviews: 0 };
+
   return (
-    <AppShell user={{ name: data.profile.displayName, detail: data.family?.name ?? "가족 미설정" }}>
-      <LiveParentWorkspace section="dashboard" data={data} />
+    <AppShell
+      role="parent"
+      user={session ? { name: session.displayName ?? "부모님", detail: session.familyId ? "가족 학습 관리자" : "가족 미설정" } : undefined}
+      pendingReviews={summary.pendingReviews}
+      unread={summary.unread}
+    >
+      <ParentDashboard data={data} />
     </AppShell>
   );
 }

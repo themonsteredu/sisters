@@ -33,7 +33,7 @@ interface NavItem {
 const parentNav: NavItem[] = [
   { href: "/dashboard", label: "홈", icon: Home },
   { href: "/planning", label: "학습계획", icon: CalendarDays },
-  { href: "/reviews", label: "제출검수", icon: ClipboardCheck, badge: "2" },
+  { href: "/reviews", label: "제출검수", icon: ClipboardCheck },
   { href: "/tests", label: "테스트", icon: BrainCircuit },
   { href: "/reports", label: "리포트", icon: ChartNoAxesCombined },
 ];
@@ -55,14 +55,18 @@ interface ShellUser {
   avatar?: string;
 }
 
-export function AppShell({ children, role = "parent", user: userProp }: { children: ReactNode; role?: ShellRole; user?: ShellUser }) {
+export function AppShell({ children, role = "parent", user: userProp, pendingReviews = 0, unread = 0 }: { children: ReactNode; role?: ShellRole; user?: ShellUser; pendingReviews?: number; unread?: number }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const nav = role === "student" ? studentNav : role === "admin" ? adminNav : parentNav;
+  const baseNav = role === "student" ? studentNav : role === "admin" ? adminNav : parentNav;
+  // The review badge used to be a hardcoded "2" on every page. It now shows
+  // only when there is something actually waiting.
+  const nav = baseNav.map((item) =>
+    item.href === "/reviews" && pendingReviews > 0 ? { ...item, badge: String(pendingReviews) } : item,
+  );
   const sampleUser = role === "student" ? { name: "학생", detail: "학습 계정", avatar: "학" } : role === "admin" ? { name: "Sisters 운영자", detail: "시스템 관리자", avatar: "S" } : { name: "부모님", detail: "가족 학습매니저", avatar: "부" };
   const user = userProp ? { ...userProp, avatar: userProp.avatar ?? userProp.name.slice(0, 1) } : sampleUser;
-  const showSampleSummary = role === "parent" && !userProp;
   const todayLabel = new Intl.DateTimeFormat("ko-KR", {
     timeZone: "Asia/Seoul",
     year: "numeric",
@@ -94,11 +98,6 @@ export function AppShell({ children, role = "parent", user: userProp }: { childr
             );
           })}
         </nav>
-        {showSampleSummary ? <div className="m-4 rounded-2xl border border-[#dad5ef] bg-[#e9e6f7] p-4 text-[#4f438d]">
-          <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#7165a6]"><Sparkles size={14} /> 이번 주 가족 목표</div>
-          <div className="text-2xl font-black">82%</div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#d4cfea]"><div className="h-full w-[82%] rounded-full bg-[#6b59cc]" /></div>
-        </div> : null}
         <div className="flex items-center gap-3 border-t border-slate-100 p-4">
           <span className="grid size-10 place-items-center rounded-full bg-amber-100 font-bold text-amber-700">{user.avatar}</span>
           <div className="min-w-0 flex-1"><strong className="block truncate text-sm">{user.name}</strong><span className="block truncate text-xs text-slate-400">{user.detail}</span></div>
@@ -110,8 +109,7 @@ export function AppShell({ children, role = "parent", user: userProp }: { childr
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#dfe3e8] bg-[#f8f8f6]/95 px-4 backdrop-blur md:px-8 lg:h-20">
           <div className="flex items-center gap-3"><button onClick={() => setMobileMenuOpen(true)} className="grid size-10 place-items-center rounded-xl text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="메뉴" aria-expanded={mobileMenuOpen}><Menu size={21} /></button><div className="hidden sm:block"><span className="text-xs font-medium text-slate-400">{todayLabel}</span><p className="text-sm font-bold">Sisters 학습관리</p></div></div>
           <div className="flex items-center gap-2">
-            {showSampleSummary ? <Link href="/reviews" className="hidden items-center gap-1.5 rounded-full bg-[#e9e6f7] px-3 py-2 text-xs font-bold text-[#5544a8] md:flex"><Sparkles size={14} /> AI 분석 2건</Link> : null}
-            <button className="relative grid size-10 place-items-center rounded-xl border border-[#d9dee5] bg-[#fafaf7] text-slate-600 hover:bg-[#f1f2f0]" aria-label="알림"><Bell size={19} /><span className="absolute right-2 top-2 size-2 rounded-full bg-rose-500 ring-2 ring-[#fafaf7]" /></button>
+            <Link href={role === "student" ? "/student" : "/reviews"} className="relative grid size-10 place-items-center rounded-xl border border-[#d9dee5] bg-[#fafaf7] text-slate-600 hover:bg-[#f1f2f0]" aria-label={unread > 0 ? `알림 ${unread}건` : "알림"}><Bell size={19} />{unread > 0 ? <span className="absolute right-2 top-2 size-2 rounded-full bg-rose-500 ring-2 ring-[#fafaf7]" /> : null}</Link>
             <Link href={role === "admin" ? "/admin/ai" : role === "parent" ? "/settings/privacy" : "/login"} className="grid size-10 place-items-center rounded-xl border border-[#d9dee5] bg-[#fafaf7] text-slate-600" aria-label="설정"><Settings size={19} /></Link>
           </div>
         </header>
