@@ -1,8 +1,7 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
-import { getParentActor } from "@/lib/auth/guard";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getParentSession } from "@/lib/auth/guard";
 
 export interface ParentWorkspaceData {
   profile: {
@@ -57,33 +56,17 @@ function seoulDate() {
 }
 
 export async function requireParentWorkspace(): Promise<ParentWorkspaceData> {
-  const actor = await getParentActor();
-  if (!actor) redirect("/login");
+  // getParentSession is request-cached and already carries the profile fields,
+  // so this no longer repeats auth.getUser() or the sisters_profiles lookup —
+  // both were previously issued twice per page load, each a separate round-trip.
+  const session = await getParentSession();
+  if (!session) redirect("/login");
 
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) redirect("/login?error=Supabase%20설정이%20필요합니다");
+  const { supabase, familyId: resolvedFamilyId } = session;
+  const displayName = session.displayName || "부모님";
+  const email = session.email;
 
-  const [{ data: authData }, { data: profile }, { data: membership }] = await Promise.all([
-    supabase.auth.getUser(),
-    supabase
-      .from("sisters_profiles")
-      .select("display_name,email")
-      .eq("id", actor.id)
-      .maybeSingle(),
-    supabase
-      .from("sisters_family_members")
-      .select("family_id")
-      .eq("user_id", actor.id)
-      .limit(1)
-      .maybeSingle(),
-  ]);
-
-  const displayName = profile?.display_name?.trim()
-    || authData.user?.email?.split("@")[0]
-    || "부모님";
-  const email = profile?.email ?? authData.user?.email ?? null;
-
-  if (!membership?.family_id) {
+  if (!resolvedFamilyId) {
     return {
       profile: { displayName, email },
       family: null,
@@ -95,7 +78,7 @@ export async function requireParentWorkspace(): Promise<ParentWorkspaceData> {
     };
   }
 
-  const familyId = membership.family_id;
+  const familyId = resolvedFamilyId;
   const today = seoulDate();
   const [
     familyResult,

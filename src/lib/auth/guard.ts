@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { isDemoMode } from "@/lib/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
@@ -8,18 +9,58 @@ export interface Actor {
   role: "admin" | "parent";
 }
 
-export async function getParentActor(): Promise<Actor | null> {
-  if (isDemoMode) return { id: "demo-parent", role: "parent" };
+export interface ParentSession {
+  actor: Actor;
+  email: string | null;
+  displayName: string | null;
+  /** null when the account has completed sign-up but not family onboarding. */
+  familyId: string | null;
+  supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>;
+}
+
+/**
+ * Resolves the signed-in parent, their profile and their family in two
+ * round-trips, once per request.
+ *
+ * `auth.getUser()` is a network call to the Supabase auth server
+ * (GET /auth/v1/user), not a local token decode. Loading a parent page used to
+ * issue it twice, plus sisters_profiles twice, across four sequential waves.
+ * React's `cache` dedupes this across the whole render, and the profile and
+ * membership lookups — which only need the user id — are issued together.
+ */
+export const getParentSession = cache(async (): Promise<ParentSession | null> => {
   const supabase = await createSupabaseServerClient();
   if (!supabase) return null;
+
   const { data } = await supabase.auth.getUser();
   if (!data.user) return null;
-  const { data: profile } = await supabase
-    .from("sisters_profiles")
-    .select("role")
-    .eq("id", data.user.id)
-    .single();
-  return { id: data.user.id, role: profile?.role === "admin" ? "admin" : "parent" };
+
+  const [{ data: profile }, { data: membership }] = await Promise.all([
+    supabase
+      .from("sisters_profiles")
+      .select("role, display_name, email")
+      .eq("id", data.user.id)
+      .maybeSingle(),
+    supabase
+      .from("sisters_family_members")
+      .select("family_id")
+      .eq("user_id", data.user.id)
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  return {
+    actor: { id: data.user.id, role: profile?.role === "admin" ? "admin" : "parent" },
+    email: profile?.email ?? data.user.email ?? null,
+    displayName: profile?.display_name?.trim() || data.user.email?.split("@")[0] || null,
+    familyId: membership?.family_id ?? null,
+    supabase,
+  };
+});
+
+export async function getParentActor(): Promise<Actor | null> {
+  if (isDemoMode) return { id: "demo-parent", role: "parent" };
+  return (await getParentSession())?.actor ?? null;
 }
 
 export async function requireAdmin(): Promise<Actor> {

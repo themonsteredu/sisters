@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import { AdminPinForm } from "@/components/settings/admin-pin-form";
 import { AppShell } from "@/components/shell/app-shell";
 import { canConfigureAdminPin } from "@/lib/auth/admin-pin";
-import { getParentActor } from "@/lib/auth/guard";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getParentActor, getParentSession } from "@/lib/auth/guard";
+import { isDemoMode } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -11,16 +11,15 @@ export default async function AdminPinSettingsPage() {
   const actor = await getParentActor();
   if (!actor) redirect("/login?reason=admin-setup");
 
-  const [permission, supabase] = await Promise.all([
+  // The session is request-cached and already carries display_name, so this
+  // page no longer issues its own sisters_profiles query.
+  const [permission, session] = await Promise.all([
     canConfigureAdminPin(actor.id),
-    createSupabaseServerClient(),
+    isDemoMode ? Promise.resolve(null) : getParentSession(),
   ]);
-  const { data: profile } = supabase
-    ? await supabase.from("sisters_profiles").select("display_name").eq("id", actor.id).maybeSingle()
-    : { data: null };
 
   return (
-    <AppShell role="parent" user={{ name: profile?.display_name ?? "부모님", detail: "가족 학습 관리자" }}>
+    <AppShell role="parent" user={{ name: session?.displayName ?? "부모님", detail: "가족 학습 관리자" }}>
       {permission.allowed ? (
         <AdminPinForm configured={permission.configured} />
       ) : (
