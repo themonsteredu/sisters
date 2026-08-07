@@ -1,20 +1,25 @@
 import type { Metadata } from "next";
-import { AppShell } from "@/components/shell/app-shell";
 import { ReviewWorkspace } from "@/components/reviews/review-workspace";
-import { LiveParentWorkspace } from "@/components/dashboard/live-parent-workspace";
-import { requireParentWorkspace } from "@/lib/auth/parent-workspace";
+import { AppShell } from "@/components/shell/app-shell";
+import { getParentSession } from "@/lib/auth/guard";
 import { isDemoMode } from "@/lib/config";
+import { loadReviewWorkspace } from "@/lib/data/reviews";
 
 export const metadata: Metadata = { title: "제출검수" };
 export const dynamic = "force-dynamic";
 
 export default async function ReviewsPage() {
-  if (isDemoMode) return <AppShell><ReviewWorkspace /></AppShell>;
+  const [data, session] = await Promise.all([
+    loadReviewWorkspace(),
+    isDemoMode ? Promise.resolve(null) : getParentSession(),
+  ]);
 
-  const data = await requireParentWorkspace();
   return (
-    <AppShell user={{ name: data.profile.displayName, detail: data.family?.name ?? "가족 미설정" }}>
-      <LiveParentWorkspace section="reviews" data={data} />
+    <AppShell
+      role="parent"
+      user={session ? { name: session.displayName ?? "부모님", detail: session.familyId ? "가족 학습 관리자" : "가족 미설정" } : undefined}
+    >
+      <ReviewWorkspace data={data} />
     </AppShell>
   );
 }

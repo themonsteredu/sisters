@@ -13,21 +13,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { ParentWorkspaceData } from "@/lib/auth/parent-workspace";
 
-// "planning" is gone: /planning now renders the real PlanningWorkspace against
-// src/lib/data/planning.ts. This read-only fallback shrinks by one section each
-// time a slice gains its write path, and is deleted once all of them have.
-export type ParentSection = "dashboard" | "reviews" | "tests" | "reports";
+// "planning" and "reviews" are gone: those routes now render their real
+// workspaces against src/lib/data/*. This read-only fallback shrinks by one
+// section each time a slice gains its write path, and is deleted once all have.
+export type ParentSection = "dashboard" | "tests" | "reports";
 
 const sectionCopy: Record<ParentSection, { eyebrow: string; title: string; description: string }> = {
   dashboard: {
     eyebrow: "부모 대시보드",
     title: "오늘 학습 현황",
     description: "현재 가족 공간에 저장된 실제 데이터만 표시합니다.",
-  },
-  reviews: {
-    eyebrow: "제출검수",
-    title: "부모 검수 대기",
-    description: "학생이 실제로 제출한 학습 증빙만 표시합니다.",
   },
   tests: {
     eyebrow: "테스트",
@@ -156,23 +151,6 @@ export function LiveParentWorkspace({ section, data }: { section: ParentSection;
                 </div>
               </Card>
             </div>
-          )}
-
-          {section === "reviews" && (
-            <Card className="overflow-hidden">
-              <div className="border-b border-slate-100 p-5"><h2 className="font-black">검수 대기 목록</h2></div>
-              <div className="divide-y divide-slate-100">
-                {data.pendingSubmissions.length ? data.pendingSubmissions.map((submission) => (
-                  <div key={submission.id} className="flex items-center gap-3 p-4">
-                    <ClipboardCheck size={18} className="text-amber-600" />
-                    <strong className="flex-1 text-sm">{studentName(data, submission.studentId)} 제출물</strong>
-                    <span className="text-xs text-slate-400">
-                      {new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", dateStyle: "medium" }).format(new Date(submission.submittedAt))}
-                    </span>
-                  </div>
-                )) : <p className="p-8 text-center text-sm text-slate-400">검수를 기다리는 제출물이 없습니다.</p>}
-              </div>
-            </Card>
           )}
 
           {section === "tests" && (
