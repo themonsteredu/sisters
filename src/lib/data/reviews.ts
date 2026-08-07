@@ -3,6 +3,7 @@ import "server-only";
 import type { ReviewWorkspaceData } from "@/components/reviews/review-workspace";
 import { demoStudents, demoSubmissions, demoTasks } from "@/lib/demo-data";
 import { logError } from "@/lib/observability/log";
+import { listPendingAttempts } from "./attempt-review";
 import { getParentContext, isDemoContext } from "./context";
 import { formatSubmittedAt, listPendingSubmissions } from "./submissions";
 
@@ -12,6 +13,7 @@ function demoWorkspace(): ReviewWorkspaceData {
     demo: true,
     hasFamily: true,
     reviewedToday: demoSubmissions.length - pending.length,
+    pendingAttempts: [],
     pending: pending.map((submission) => {
       const task = demoTasks.find((item) => item.id === submission.taskId);
       const student = demoStudents.find((item) => item.id === submission.studentId);
@@ -42,21 +44,22 @@ export async function loadReviewWorkspace(): Promise<ReviewWorkspaceData> {
 
   const result = await getParentContext();
   if (!result.ok) {
-    return { demo: false, hasFamily: result.reason !== "no-family" ? false : false, pending: [], reviewedToday: 0 };
+    return { demo: false, hasFamily: false, pending: [], reviewedToday: 0, pendingAttempts: [] };
   }
 
   const { supabase, familyId } = result.context;
 
-  const [pending, reviewed] = await Promise.all([
+  const [pending, reviewed, pendingAttempts] = await Promise.all([
     listPendingSubmissions(result.context),
     supabase
       .from("sisters_submissions")
       .select("id", { count: "exact", head: true })
       .eq("family_id", familyId)
       .not("parent_decision", "is", null),
+    listPendingAttempts(result.context),
   ]);
 
   if (reviewed.error) logError("data/reviews.loadReviewWorkspace", reviewed.error, { familyId });
 
-  return { demo: false, hasFamily: true, pending, reviewedToday: reviewed.count ?? 0 };
+  return { demo: false, hasFamily: true, pending, reviewedToday: reviewed.count ?? 0, pendingAttempts };
 }

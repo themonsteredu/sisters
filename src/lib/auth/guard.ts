@@ -15,6 +15,8 @@ export interface ParentSession {
   displayName: string | null;
   /** null when the account has completed sign-up but not family onboarding. */
   familyId: string | null;
+  /** Operator-set hold; see sisters_families.suspended. */
+  familySuspended: boolean;
   supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>;
 }
 
@@ -43,17 +45,21 @@ export const getParentSession = cache(async (): Promise<ParentSession | null> =>
       .maybeSingle(),
     supabase
       .from("sisters_family_members")
-      .select("family_id")
+      .select("family_id, sisters_families(suspended)")
       .eq("user_id", data.user.id)
       .limit(1)
       .maybeSingle(),
   ]);
+
+  const familyEmbed = membership?.sisters_families as { suspended?: boolean } | { suspended?: boolean }[] | null | undefined;
+  const familyRow = Array.isArray(familyEmbed) ? familyEmbed[0] : familyEmbed;
 
   return {
     actor: { id: data.user.id, role: profile?.role === "admin" ? "admin" : "parent" },
     email: profile?.email ?? data.user.email ?? null,
     displayName: profile?.display_name?.trim() || data.user.email?.split("@")[0] || null,
     familyId: membership?.family_id ?? null,
+    familySuspended: Boolean(familyRow?.suspended),
     supabase,
   };
 });

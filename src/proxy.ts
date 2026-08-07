@@ -11,6 +11,7 @@ const adminSessionCookie = "sisters_admin_session";
 // Presence check only. Signature verification, revocation and expiry still run
 // in the page loaders — the edge must not hit Postgres on every request.
 const parentPaths = ["/dashboard", "/planning", "/reviews", "/tests", "/reports", "/onboarding", "/settings"];
+// /notifications serves both roles, so it is gated on either session cookie.
 const studentPaths = ["/student"];
 const adminPaths = ["/admin"];
 
@@ -47,6 +48,11 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname === "/notifications" || pathname.startsWith("/notifications/")) {
+    if (!hasSupabaseAuthCookie(request) && !request.cookies.has(studentSessionCookie)) return redirectToLogin(request);
+    return NextResponse.next();
+  }
+
   if (matches(pathname, parentPaths)) {
     if (!hasSupabaseAuthCookie(request)) return redirectToLogin(request);
     return NextResponse.next();
@@ -65,6 +71,8 @@ export const config = {
     "/onboarding/:path*",
     "/settings/:path*",
     "/student/:path*",
+    "/notifications/:path*",
+    "/notifications",
     "/admin/:path*",
   ],
 };

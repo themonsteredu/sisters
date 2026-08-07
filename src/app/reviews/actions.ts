@@ -3,11 +3,61 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { isDemoMode } from "@/lib/config";
+import { gradeAttempt } from "@/lib/data/attempt-review";
 import { getParentContext } from "@/lib/data/context";
 import { recordDecision } from "@/lib/data/submissions";
 import { actionFailure as fail, type ActionState } from "@/lib/forms/action-state";
 import { proposeRemediationDate } from "@/lib/domain/scheduler";
 import { logError } from "@/lib/observability/log";
+
+const gradeSchema = z.object({
+  attemptId: z.string().min(1),
+  awardedJson: z.string().min(2),
+  feedback: z.string().trim().max(2_000).optional(),
+});
+
+/** Applies the parent's points to the free-response items of an attempt. */
+export async function gradeAttemptAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = gradeSchema.safeParse({
+    attemptId: formData.get("attemptId"),
+    awardedJson: formData.get("awardedJson"),
+    feedback: formData.get("feedback") || undefined,
+  });
+  if (!parsed.success) return fail("채점 내용을 확인해 주세요.");
+
+  let awarded: Record<string, number>;
+  try {
+    const raw = JSON.parse(parsed.data.awardedJson) as Record<string, unknown>;
+    awarded = Object.fromEntries(
+      Object.entries(raw).map(([key, value]) => [key, Number(value) || 0]),
+    );
+  } catch {
+    return fail("배점을 다시 확인해 주세요.");
+  }
+
+  if (isDemoMode) return { ok: true, message: "데모 모드입니다. 채점이 저장되지는 않습니다." };
+
+  const context = await getParentContext();
+  if (!context.ok) return fail(context.message);
+
+  try {
+    const result = await gradeAttempt(context.context, {
+      attemptId: parsed.data.attemptId,
+      awarded,
+      feedback: parsed.data.feedback,
+    });
+    revalidatePath("/reviews");
+    revalidatePath("/tests");
+    revalidatePath("/reports");
+    return {
+      ok: true,
+      message: `최종 ${result.score}점 · ${result.passed ? "합격" : "불합격"}으로 기록했습니다.`,
+    };
+  } catch (error) {
+    logError("reviews/gradeAttemptAction", error, { attemptId: parsed.data.attemptId });
+    return fail(error instanceof Error && error.message.includes("이미") ? error.message : "채점을 저장하지 못했습니다.");
+  }
+}
 
 const decisionSchema = z.object({
   submissionId: z.string().min(1),

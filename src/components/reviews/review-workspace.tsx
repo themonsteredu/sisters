@@ -12,7 +12,9 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { reviewSubmissionAction } from "@/app/reviews/actions";
 import { idleState, type ActionState } from "@/lib/forms/action-state";
+import type { PendingAttempt } from "@/lib/data/attempt-review";
 import type { PendingSubmission } from "@/lib/data/submissions";
+import { AttemptGrader } from "./attempt-grader";
 import { subjectTone } from "@/lib/utils";
 
 export interface ReviewWorkspaceData {
@@ -20,6 +22,7 @@ export interface ReviewWorkspaceData {
   hasFamily: boolean;
   pending: PendingSubmission[];
   reviewedToday: number;
+  pendingAttempts: PendingAttempt[];
 }
 
 interface AiReview {
@@ -83,6 +86,8 @@ export function ReviewWorkspace({ data }: { data: ReviewWorkspaceData }) {
           <button type="button" onClick={() => setNotice(idleState)} aria-label="알림 닫기"><X size={16} /></button>
         </div>
       ) : null}
+
+      <AttemptGrader attempts={data.pendingAttempts} />
 
       <div className="grid gap-5 xl:grid-cols-[340px_1fr]">
         <Card className="h-fit overflow-hidden">

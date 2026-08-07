@@ -24,7 +24,7 @@ export interface ParentContext {
 
 export type ContextResult<T> =
   | { ok: true; context: T }
-  | { ok: false; reason: "unauthenticated" | "no-family" | "unconfigured"; message: string };
+  | { ok: false; reason: "unauthenticated" | "no-family" | "unconfigured" | "suspended"; message: string };
 
 export async function getParentContext(): Promise<ContextResult<ParentContext>> {
   const session = await getParentSession();
@@ -33,6 +33,10 @@ export async function getParentContext(): Promise<ContextResult<ParentContext>> 
   }
   if (!session.familyId) {
     return { ok: false, reason: "no-family", message: "가족 공간을 먼저 만들어 주세요." };
+  }
+  // sisters_families.suspended was stored but never checked anywhere.
+  if (session.familySuspended) {
+    return { ok: false, reason: "suspended", message: "이용이 일시 중지된 가족 공간입니다. 운영자에게 문의해 주세요." };
   }
   return {
     ok: true,
