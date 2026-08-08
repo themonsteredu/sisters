@@ -29,5 +29,5 @@ export function useFields<T extends Record<string, string>>(initial: T) {
 
   const reset = useCallback(() => setValues(initial), [initial]);
 
-  return { values, field, set, reset };
+  return { values, field, set, reset, setValues };
 }

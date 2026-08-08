@@ -23,8 +23,10 @@ import { Progress } from "@/components/ui/progress";
 import { createCourseAction, createPlanAction, createWorkbookAction } from "@/app/planning/actions";
 import { idleState, type ActionState } from "@/lib/forms/action-state";
 import { useFields } from "@/lib/forms/use-fields";
+import { QuickPlan } from "./quick-plan";
 import { TaskMaterials } from "./task-materials";
 import { parseCourseOutline } from "@/lib/domain/course-parser";
+import type { PlanIntent } from "@/lib/domain/plan-intent";
 import type { PlanningWorkspaceData } from "@/lib/data/planning";
 import { subjectDot, subjectTone } from "@/lib/utils";
 
@@ -175,6 +177,27 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
     idleState,
   );
 
+  // The quick-plan box hands over a parsed draft; we fill the real form with it
+  // and open the modal so nothing is created without the parent seeing it.
+  function applyIntent(intent: PlanIntent) {
+    plan.setValues((current) => ({
+      ...current,
+      studentId: intent.studentId ?? current.studentId,
+      subjectId: intent.subjectId ?? current.subjectId,
+      title: intent.title ?? current.title,
+      periodStart: intent.periodStart ?? current.periodStart,
+      periodEnd: intent.periodEnd ?? current.periodEnd,
+      totalUnits: intent.totalUnits ? String(intent.totalUnits) : current.totalUnits,
+      unitLabel: intent.unitLabel ?? current.unitLabel,
+      maxUnitsPerDay: intent.maxUnitsPerDay ? String(intent.maxUnitsPerDay) : current.maxUnitsPerDay,
+      minutesPerUnit: intent.minutesPerUnit ? String(intent.minutesPerUnit) : current.minutesPerUnit,
+      taskType: intent.taskType ?? current.taskType,
+      holidays: intent.holidays.length ? intent.holidays.join(", ") : current.holidays,
+    }));
+    if (intent.weekdays?.length) setWeekdays(intent.weekdays);
+    setOpenModal("plan");
+  }
+
   const outlinePreview = useMemo(
     () => (course.values.outline.trim() ? parseCourseOutline(course.values.outline) : []),
     [course.values.outline],
@@ -234,6 +257,8 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
       ) : null}
 
       <Feedback state={notice} />
+
+      {canRegister ? <QuickPlan data={data} today={data.today} onApply={applyIntent} /> : null}
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="p-5">

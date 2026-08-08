@@ -64,6 +64,8 @@ export interface PlanningWorkspaceData {
   /** null when the parent has not completed family onboarding. */
   hasFamily: boolean;
   month: string;
+  /** Today in Asia/Seoul; the quick-plan parser resolves relative dates against it. */
+  today: string;
   students: PlanningStudent[];
   subjects: PlanningSubject[];
   courses: PlanningCourse[];
@@ -80,6 +82,11 @@ export function monthRange(month: string) {
   return { start: iso(start), end: iso(end), daysInMonth: end.getUTCDate() };
 }
 
+export function currentSeoulDate() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" })
+    .format(new Date());
+}
+
 export function currentSeoulMonth() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit" })
     .format(new Date())
@@ -91,6 +98,7 @@ function demoWorkspace(month: string): PlanningWorkspaceData {
     demo: true,
     hasFamily: true,
     month,
+    today: currentSeoulDate(),
     students: demoStudents.map((student) => ({ id: student.id, name: student.name, grade: student.grade })),
     subjects: ["영어", "수학", "국어", "과학", "역사"].map((name) => ({ id: `subject-${name}`, name })),
     courses: demoCourses.map((course) => ({
@@ -126,7 +134,7 @@ function demoWorkspace(month: string): PlanningWorkspaceData {
 }
 
 function emptyWorkspace(month: string, hasFamily: boolean): PlanningWorkspaceData {
-  return { demo: false, hasFamily, month, students: [], subjects: [], courses: [], workbooks: [], plans: [], tasks: [] };
+  return { demo: false, hasFamily, month, today: currentSeoulDate(), students: [], subjects: [], courses: [], workbooks: [], plans: [], tasks: [] };
 }
 
 export async function loadPlanningWorkspace(month = currentSeoulMonth()): Promise<PlanningWorkspaceData> {
@@ -200,6 +208,7 @@ export async function loadPlanningWorkspace(month = currentSeoulMonth()): Promis
     demo: false,
     hasFamily: true,
     month,
+    today: currentSeoulDate(),
     students: (students.data ?? []).map((row) => ({ id: row.id, name: row.name, grade: row.grade })),
     subjects: (subjects.data ?? []).map((row) => ({ id: row.id, name: row.name })),
     courses: (courses.data ?? []).map((row) => ({
