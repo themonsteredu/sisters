@@ -2,8 +2,8 @@
 
 import { useActionState, useMemo, useState } from "react";
 import {
+  Archive,
   BookCopy,
-  BookOpen,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { createCourseAction, createPlanAction, createWorkbookAction } from "@/app/planning/actions";
+import { archivePlanAction, createCourseAction, createPlanAction, createWorkbookAction } from "@/app/planning/actions";
 import { idleState, type ActionState } from "@/lib/forms/action-state";
 import { useFields } from "@/lib/forms/use-fields";
 import { QuickPlan } from "./quick-plan";
@@ -31,6 +31,13 @@ import type { PlanningWorkspaceData } from "@/lib/data/planning";
 import { subjectDot, subjectTone } from "@/lib/utils";
 
 const weekdayLabels = ["일", "월", "화", "수", "목", "금", "토"];
+
+const planStatusBadge: Record<string, { label: string; tone: string }> = {
+  draft: { label: "임시", tone: "bg-slate-100 text-slate-600" },
+  confirmed: { label: "확정", tone: "bg-blue-50 text-blue-700" },
+  published: { label: "진행 중", tone: "bg-emerald-50 text-emerald-700" },
+  archived: { label: "보관됨", tone: "bg-slate-100 text-slate-400" },
+};
 
 function monthShift(month: string, delta: number) {
   const [year, index] = month.split("-").map(Number);
@@ -120,10 +127,16 @@ function StudentSubjectFields({
 }
 
 export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
-  const [view, setView] = useState<"calendar" | "content">("calendar");
+  const [view, setView] = useState<"calendar" | "plans" | "content">("calendar");
   const [openModal, setOpenModal] = useState<null | "course" | "workbook" | "plan">(null);
   const [weekdays, setWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [notice, setNotice] = useState<ActionState>(idleState);
+  // Archiving removes the plan's remaining tasks, so the button arms first and
+  // only a second press on the same plan actually submits.
+  const [armedPlanId, setArmedPlanId] = useState<string | null>(null);
+  // "" = free-form plan; "course:<id>" / "workbook:<id>" = built from a
+  // registered source, which also links the tasks back to it via sourceId.
+  const [planSource, setPlanSource] = useState("");
   // Phones show one day at a time. Defaults to the earliest day with work so
   // the panel is not empty on arrival.
   const [materialTask, setMaterialTask] = useState<PlanningWorkspaceData["tasks"][number] | null>(null);
@@ -156,6 +169,7 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
   function onSuccess(state: ActionState, form: { reset: () => void }) {
     if (state.ok) {
       form.reset();
+      setPlanSource("");
       setOpenModal(null);
       // The modal is gone, so the page banner has to carry the confirmation.
       // It holds the latest result only — failures stay in the open modal.
@@ -176,10 +190,65 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
     async (previous: ActionState, formData: FormData) => onSuccess(await createPlanAction(previous, formData), plan),
     idleState,
   );
+  const [archiveState, submitArchive, archivePending] = useActionState(
+    async (previous: ActionState, formData: FormData) => {
+      const result = await archivePlanAction(previous, formData);
+      setArmedPlanId(null);
+      if (result.ok) setNotice(result);
+      return result;
+    },
+    idleState,
+  );
+
+  // Picking a registered course fills everything the parent used to retype:
+  // student, subject, title and the lesson count straight from the outline.
+  function applyCourse(item: PlanningWorkspaceData["courses"][number]) {
+    plan.setValues((current) => ({
+      ...current,
+      studentId: item.studentId,
+      subjectId: item.subjectId,
+      title: item.title,
+      totalUnits: item.lessonCount ? String(item.lessonCount) : current.totalUnits,
+      unitLabel: "강",
+      taskType: "lecture",
+    }));
+    setPlanSource(`course:${item.id}`);
+    setOpenModal("plan");
+  }
+
+  function applyWorkbook(item: PlanningWorkspaceData["workbooks"][number]) {
+    plan.setValues((current) => ({
+      ...current,
+      studentId: item.studentId,
+      subjectId: item.subjectId,
+      title: item.unit ? `${item.title} ${item.unit}` : item.title,
+      totalUnits: String(Math.max(1, item.endPage - item.currentPage + 1)),
+      unitLabel: "쪽",
+      taskType: "workbook",
+      minutesPerUnit: "10",
+      periodEnd: item.targetDate || current.periodEnd,
+    }));
+    setPlanSource(`workbook:${item.id}`);
+    setOpenModal("plan");
+  }
+
+  function applyPlanSource(value: string) {
+    setPlanSource(value);
+    if (!value) return;
+    const [kind, id] = value.split(":");
+    if (kind === "course") {
+      const item = data.courses.find((course) => course.id === id);
+      if (item) applyCourse(item);
+    } else {
+      const item = data.workbooks.find((book) => book.id === id);
+      if (item) applyWorkbook(item);
+    }
+  }
 
   // The quick-plan box hands over a parsed draft; we fill the real form with it
   // and open the modal so nothing is created without the parent seeing it.
   function applyIntent(intent: PlanIntent) {
+    setPlanSource("");
     plan.setValues((current) => ({
       ...current,
       studentId: intent.studentId ?? current.studentId,
@@ -284,6 +353,7 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4 md:p-5">
           <div className="flex rounded-xl bg-slate-100 p-1">
             <button type="button" onClick={() => setView("calendar")} className={`rounded-lg px-4 py-2 text-sm font-bold ${view === "calendar" ? "bg-white text-violet-700 shadow-sm" : "text-slate-500"}`}>달력</button>
+            <button type="button" onClick={() => setView("plans")} className={`rounded-lg px-4 py-2 text-sm font-bold ${view === "plans" ? "bg-white text-violet-700 shadow-sm" : "text-slate-500"}`}>계획</button>
             <button type="button" onClick={() => setView("content")} className={`rounded-lg px-4 py-2 text-sm font-bold ${view === "content" ? "bg-white text-violet-700 shadow-sm" : "text-slate-500"}`}>강좌·교재</button>
           </div>
           <div className="flex items-center gap-2">
@@ -393,6 +463,56 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
               <p className="hidden p-8 text-center text-sm text-slate-400 md:block">이 달에 배정된 과제가 없습니다. 학습계획을 만들어 보세요.</p>
             ) : null}
           </div>
+        ) : view === "plans" ? (
+          <div className="p-5">
+            <p className="mb-4 text-xs text-slate-400">
+              끝났거나 잘못 만든 계획은 보관하세요. 아직 시작 전인 과제는 학생 화면에서 사라지고, 이미 제출·승인된 기록은 그대로 남습니다.
+            </p>
+            <div className="space-y-3">
+              {data.plans.length ? data.plans.map((item) => {
+                const badge = planStatusBadge[item.status] ?? { label: item.status, tone: "bg-slate-100 text-slate-600" };
+                const armed = armedPlanId === item.id;
+                return (
+                  <div key={item.id} className={`rounded-xl border p-4 ${item.status === "archived" ? "border-slate-100 bg-slate-50/50" : "border-slate-200"}`}>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <Badge className={badge.tone}>{badge.label}</Badge>
+                          <strong className={`truncate text-sm ${item.status === "archived" ? "text-slate-400" : ""}`}>{item.title}</strong>
+                        </div>
+                        <p className="mt-1.5 text-xs text-slate-400">
+                          {studentName(item.studentId)} · {item.periodStart} ~ {item.periodEnd} · 과제 {item.taskCount}개
+                        </p>
+                      </div>
+                      {item.status !== "archived" ? (
+                        armed ? (
+                          <form action={submitArchive} className="flex flex-wrap items-center gap-2">
+                            <input type="hidden" name="planId" value={item.id} />
+                            <span className="text-xs font-bold text-rose-600">시작 전 과제도 함께 삭제돼요</span>
+                            <Button type="submit" variant="danger" disabled={archivePending}>
+                              {archivePending ? "보관 중…" : "정말 보관"}
+                            </Button>
+                            <Button variant="ghost" onClick={() => setArmedPlanId(null)} disabled={archivePending}>취소</Button>
+                          </form>
+                        ) : (
+                          <Button variant="secondary" onClick={() => setArmedPlanId(item.id)} disabled={archivePending}>
+                            <Archive size={15} /> 보관
+                          </Button>
+                        )
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              }) : (
+                <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-400">
+                  아직 만든 학습계획이 없습니다. 위의 한 줄 입력이나 “학습계획 만들기”로 시작해 보세요.
+                </p>
+              )}
+            </div>
+            {archiveState.message && !archiveState.ok ? (
+              <p role="status" className="mt-3 rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-800">{archiveState.message}</p>
+            ) : null}
+          </div>
         ) : (
           <div className="grid gap-5 p-5 lg:grid-cols-2">
             <section>
@@ -400,11 +520,18 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
               <div className="space-y-3">
                 {data.courses.length ? data.courses.map((course) => (
                   <div key={course.id} className="rounded-xl border border-slate-200 p-4">
-                    <Badge className={subjectTone(course.subject)}>{course.subject}</Badge>
-                    <h3 className="mt-2 font-bold">{course.title}</h3>
-                    <p className="mt-1 text-xs text-slate-400">
-                      {studentName(course.studentId)} · {course.lessonCount}강{course.teacher ? ` · ${course.teacher}` : ""}
-                    </p>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <Badge className={subjectTone(course.subject)}>{course.subject}</Badge>
+                        <h3 className="mt-2 font-bold">{course.title}</h3>
+                        <p className="mt-1 text-xs text-slate-400">
+                          {studentName(course.studentId)} · {course.lessonCount}강{course.teacher ? ` · ${course.teacher}` : ""}
+                        </p>
+                      </div>
+                      <Button variant="secondary" className="shrink-0" onClick={() => applyCourse(course)}>
+                        <WandSparkles size={15} /> 계획 만들기
+                      </Button>
+                    </div>
                   </div>
                 )) : <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-400">등록된 강좌가 없습니다.</p>}
               </div>
@@ -414,13 +541,15 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
               <div className="space-y-3">
                 {data.workbooks.length ? data.workbooks.map((book) => (
                   <div key={book.id} className="rounded-xl border border-slate-200 p-4">
-                    <div className="flex justify-between gap-3">
-                      <div>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
                         <Badge className={subjectTone(book.subject)}>{book.subject}</Badge>
                         <h3 className="mt-2 font-bold">{book.title}</h3>
                         <p className="mt-1 text-xs text-slate-400">{book.unit ? `${book.unit} · ` : ""}{book.currentPage}~{book.endPage}쪽 · {book.targetDate}까지</p>
                       </div>
-                      <BookOpen size={20} className="shrink-0 text-slate-400" aria-hidden="true" />
+                      <Button variant="secondary" className="shrink-0" onClick={() => applyWorkbook(book)}>
+                        <WandSparkles size={15} /> 계획 만들기
+                      </Button>
                     </div>
                     <Progress value={Math.min(100, (book.currentPage / Math.max(1, book.endPage)) * 100)} className="mt-4" indicatorClassName="bg-blue-500" />
                   </div>
@@ -436,6 +565,10 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
           task={materialTask}
           studentName={studentName(materialTask.studentId)}
           onClose={() => setMaterialTask(null)}
+          onRescheduled={(state) => {
+            setMaterialTask(null);
+            setNotice(state);
+          }}
         />
       ) : null}
 
@@ -506,8 +639,41 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
       )}
 
       {openModal === "plan" && (
-        <Modal title="학습계획 만들기" description="휴일과 하루 최대량을 반영해 과제를 날짜별로 배분하고 학생에게 공개합니다." onClose={() => setOpenModal(null)}>
+        <Modal title="학습계획 만들기" description="등록한 강좌·문제집을 고르면 아래가 자동으로 채워집니다." onClose={() => setOpenModal(null)}>
           <form action={submitPlan} className="space-y-4 p-5">
+            {data.courses.length || data.workbooks.length ? (
+              <label className="block rounded-xl bg-violet-50/60 p-3">
+                <span className="mb-2 block text-sm font-bold">무엇을 공부하나요</span>
+                <select
+                  value={planSource}
+                  onChange={(event) => applyPlanSource(event.target.value)}
+                  aria-label="계획의 강좌 또는 문제집"
+                  className={inputClass}
+                >
+                  <option value="">직접 입력할게요</option>
+                  {data.courses.length ? (
+                    <optgroup label="등록한 강좌">
+                      {data.courses.map((item) => (
+                        <option key={item.id} value={`course:${item.id}`}>
+                          {item.subject} · {item.title} ({item.lessonCount}강) · {studentName(item.studentId)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null}
+                  {data.workbooks.length ? (
+                    <optgroup label="등록한 문제집">
+                      {data.workbooks.map((item) => (
+                        <option key={item.id} value={`workbook:${item.id}`}>
+                          {item.subject} · {item.title} ({Math.max(1, item.endPage - item.currentPage + 1)}쪽) · {studentName(item.studentId)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null}
+                </select>
+                <span className="mt-1.5 block text-xs text-slate-500">엠베스트 강좌를 고르면 제목·강 수까지 자동으로 채워져요. 기간과 요일만 정하면 끝.</span>
+              </label>
+            ) : null}
+            <input type="hidden" name="sourceId" value={planSource.split(":")[1] ?? ""} />
             <StudentSubjectFields data={data} student={plan.field("studentId")} subject={plan.field("subjectId")} />
             <label className="block">
               <span className="mb-2 block text-sm font-bold">계획 이름</span>

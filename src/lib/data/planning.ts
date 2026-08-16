@@ -21,6 +21,7 @@ export interface PlanningSubject {
 export interface PlanningCourse {
   id: string;
   studentId: string;
+  subjectId: string;
   subject: string;
   title: string;
   teacher: string | null;
@@ -30,6 +31,7 @@ export interface PlanningCourse {
 export interface PlanningWorkbook {
   id: string;
   studentId: string;
+  subjectId: string;
   subject: string;
   title: string;
   unit: string | null;
@@ -104,6 +106,7 @@ function demoWorkspace(month: string): PlanningWorkspaceData {
     courses: demoCourses.map((course) => ({
       id: course.id,
       studentId: course.studentId,
+      subjectId: `subject-${course.subject}`,
       subject: course.subject,
       title: course.title,
       teacher: course.teacher ?? null,
@@ -112,6 +115,7 @@ function demoWorkspace(month: string): PlanningWorkspaceData {
     workbooks: demoWorkbooks.map((workbook) => ({
       id: workbook.id,
       studentId: workbook.studentId,
+      subjectId: `subject-${workbook.subject}`,
       subject: workbook.subject,
       title: workbook.title,
       unit: workbook.unit ?? null,
@@ -119,7 +123,26 @@ function demoWorkspace(month: string): PlanningWorkspaceData {
       endPage: workbook.endPage,
       targetDate: workbook.targetDate,
     })),
-    plans: [],
+    plans: [
+      {
+        id: "plan-demo-english",
+        studentId: "student-minseo",
+        title: "중2 영어 문법 완성",
+        periodStart: "2026-08-03",
+        periodEnd: "2026-08-28",
+        status: "published",
+        taskCount: 12,
+      },
+      {
+        id: "plan-demo-math",
+        studentId: "student-jiwoo",
+        title: "쎈 중1 수학(상) 2회독",
+        periodStart: "2026-08-10",
+        periodEnd: "2026-09-05",
+        status: "published",
+        taskCount: 16,
+      },
+    ],
     tasks: demoTasks.map((task) => ({
       id: task.id,
       studentId: task.studentId,
@@ -151,13 +174,13 @@ export async function loadPlanningWorkspace(month = currentSeoulMonth()): Promis
     supabase.from("sisters_subjects").select("id,name").eq("family_id", familyId).order("sort_order"),
     supabase
       .from("sisters_courses")
-      .select("id,student_id,title,teacher,sisters_subjects(name),sisters_lessons(count)")
+      .select("id,student_id,subject_id,title,teacher,sisters_subjects(name),sisters_lessons(count)")
       .eq("family_id", familyId)
       .order("created_at", { ascending: false })
       .limit(100),
     supabase
       .from("sisters_workbooks")
-      .select("id,student_id,title,unit,current_page,end_page,target_date,sisters_subjects(name)")
+      .select("id,student_id,subject_id,title,unit,current_page,end_page,target_date,sisters_subjects(name)")
       .eq("family_id", familyId)
       .order("target_date")
       .limit(100),
@@ -214,6 +237,7 @@ export async function loadPlanningWorkspace(month = currentSeoulMonth()): Promis
     courses: (courses.data ?? []).map((row) => ({
       id: row.id,
       studentId: row.student_id,
+      subjectId: row.subject_id,
       subject: subjectName(row),
       title: row.title,
       teacher: row.teacher,
@@ -222,6 +246,7 @@ export async function loadPlanningWorkspace(month = currentSeoulMonth()): Promis
     workbooks: (workbooks.data ?? []).map((row) => ({
       id: row.id,
       studentId: row.student_id,
+      subjectId: row.subject_id,
       subject: subjectName(row),
       title: row.title,
       unit: row.unit,
@@ -392,4 +417,100 @@ export async function createPlanWithTasks(context: ParentContext, input: CreateP
   ]);
 
   return planId;
+}
+
+/**
+ * Archives a plan and removes its not-yet-started tasks in one transaction.
+ * Tasks the student already touched (in_progress, submitted, approved, …)
+ * stay, so the learning history survives. Returns how many tasks were removed.
+ */
+export async function archivePlan(context: ParentContext, planId: string) {
+  const { supabase, familyId } = context;
+
+  const { data: plan } = await supabase
+    .from("sisters_plans")
+    .select("id,student_id,title,status")
+    .eq("id", planId)
+    .eq("family_id", familyId)
+    .maybeSingle();
+  if (!plan) throw new Error("계획을 찾을 수 없습니다.");
+  if (plan.status === "archived") throw new Error("이미 보관된 계획입니다.");
+
+  const { data, error } = await supabase.rpc("sisters_archive_plan", {
+    p_family_id: familyId,
+    p_plan_id: planId,
+  });
+  if (error) {
+    logError("data/planning.archivePlan", error, { familyId, planId });
+    throw error;
+  }
+
+  const removed = (data as number) ?? 0;
+  await Promise.all([
+    recordAudit(context, {
+      action: "plan_archived",
+      entityType: "plan",
+      entityId: planId,
+      metadata: { removedTasks: removed },
+    }),
+    enqueueNotification({
+      familyId,
+      eventType: "plan_archived",
+      title: "학습계획이 정리되었어요",
+      body: `${plan.title} 계획이 보관되어 남은 과제 ${removed}개가 사라졌습니다.`,
+      recipientStudentId: plan.student_id,
+      dedupeKey: `plan:${planId}:archived`,
+      channels: ["in_app"],
+    }),
+  ]);
+
+  return removed;
+}
+
+/**
+ * Moves one not-yet-started task to another date. An overdue task goes back to
+ * 'scheduled' — moving it forward is exactly how a parent clears the backlog.
+ */
+export async function rescheduleTask(context: ParentContext, taskId: string, scheduledDate: string) {
+  const { supabase, familyId } = context;
+
+  const { data: task } = await supabase
+    .from("sisters_tasks")
+    .select("id,student_id,title,status,scheduled_date")
+    .eq("id", taskId)
+    .eq("family_id", familyId)
+    .maybeSingle();
+  if (!task) throw new Error("과제를 찾을 수 없습니다.");
+  if (task.status !== "scheduled" && task.status !== "overdue") {
+    throw new Error("학생이 이미 시작한 과제는 날짜를 옮길 수 없습니다.");
+  }
+  if (task.scheduled_date === scheduledDate) return;
+
+  const { error } = await supabase
+    .from("sisters_tasks")
+    .update({ scheduled_date: scheduledDate, status: "scheduled", updated_at: new Date().toISOString() })
+    .eq("id", taskId)
+    .eq("family_id", familyId);
+  if (error) {
+    logError("data/planning.rescheduleTask", error, { familyId, taskId });
+    throw error;
+  }
+
+  await Promise.all([
+    recordAudit(context, {
+      action: "task_rescheduled",
+      entityType: "task",
+      entityId: taskId,
+      metadata: { from: task.scheduled_date, to: scheduledDate },
+    }),
+    enqueueNotification({
+      familyId,
+      eventType: "task_rescheduled",
+      title: "과제 날짜가 바뀌었어요",
+      body: `${task.title} 과제가 ${scheduledDate}로 옮겨졌습니다.`,
+      recipientStudentId: task.student_id,
+      dedupeKey: `task:${taskId}:moved:${scheduledDate}`,
+      channels: ["in_app"],
+    }),
+  ]);
 }

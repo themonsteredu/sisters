@@ -13,7 +13,7 @@ import {
   maxMaterialsPerTask,
   removeUploadedMaterials,
 } from "@/lib/data/materials";
-import { createCourse, createPlanWithTasks, createWorkbook } from "@/lib/data/planning";
+import { archivePlan, createCourse, createPlanWithTasks, createWorkbook, rescheduleTask } from "@/lib/data/planning";
 import { isDemoMode } from "@/lib/config";
 import { parseCourseOutline } from "@/lib/domain/course-parser";
 import { buildPlanTasks } from "@/lib/domain/plan-tasks";
@@ -202,6 +202,75 @@ export async function deleteMaterialAction(_previous: ActionState, formData: For
   return { ok: true, message: "자료를 삭제했습니다." };
 }
 
+// Demo fixtures use readable ids here too, mirroring studentId/subjectId above.
+const entityId = (message: string) => (isDemoMode ? z.string().min(1, message) : z.uuid(message));
+
+const archivePlanSchema = z.object({ planId: entityId("계획을 찾을 수 없습니다.") });
+
+/**
+ * Archives a plan: the plan disappears from the student's list along with its
+ * not-yet-started tasks, while everything already submitted or approved stays.
+ */
+export async function archivePlanAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = archivePlanSchema.safeParse({ planId: formData.get("planId") });
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "계획을 찾을 수 없습니다.");
+
+  if (isDemoMode) return { ok: true, message: "데모 모드입니다. 계획 보관이 저장되지는 않습니다." };
+
+  const context = await getParentContext();
+  if (!context.ok) return fail(context.message);
+
+  let removed = 0;
+  try {
+    removed = await archivePlan(context.context, parsed.data.planId);
+  } catch (error) {
+    logError("planning/archivePlanAction", error, { planId: parsed.data.planId });
+    return fail(error instanceof Error && /계획|보관/.test(error.message) ? error.message : "계획을 보관하지 못했습니다.");
+  }
+
+  revalidatePath("/planning");
+  revalidatePath("/dashboard");
+  revalidatePath("/student");
+  return {
+    ok: true,
+    message: removed
+      ? `계획을 보관하고 남아 있던 과제 ${removed}개를 정리했습니다.`
+      : "계획을 보관했습니다. 이미 진행한 과제 기록은 그대로 남습니다.",
+  };
+}
+
+const rescheduleSchema = z.object({
+  taskId: entityId("과제를 찾을 수 없습니다."),
+  scheduledDate: isoDate,
+});
+
+/** Moves one not-yet-started task to another date (sick day, backlog, …). */
+export async function rescheduleTaskAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = rescheduleSchema.safeParse({
+    taskId: formData.get("taskId"),
+    scheduledDate: formData.get("scheduledDate"),
+  });
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "입력 내용을 확인해 주세요.");
+
+  if (isDemoMode) return { ok: true, message: "데모 모드입니다. 날짜 변경이 저장되지는 않습니다." };
+
+  const context = await getParentContext();
+  if (!context.ok) return fail(context.message);
+
+  try {
+    await rescheduleTask(context.context, parsed.data.taskId, parsed.data.scheduledDate);
+  } catch (error) {
+    logError("planning/rescheduleTaskAction", error, { taskId: parsed.data.taskId });
+    return fail(error instanceof Error && /과제|시작/.test(error.message) ? error.message : "날짜를 옮기지 못했습니다.");
+  }
+
+  revalidatePath("/planning");
+  revalidatePath("/dashboard");
+  revalidatePath("/student");
+  const [, month, day] = parsed.data.scheduledDate.split("-");
+  return { ok: true, message: `과제를 ${Number(month)}월 ${Number(day)}일로 옮겼습니다.` };
+}
+
 const planSchema = z
   .object({
     studentId,
@@ -216,6 +285,8 @@ const planSchema = z
     minutesPerUnit: z.coerce.number().int().min(5).max(240),
     taskType: z.enum(["lecture", "workbook", "memorize", "review", "test", "custom"]).default("lecture"),
     holidays: z.string().trim().optional(),
+    /** Course or workbook the plan was built from; links each task back to it. */
+    sourceId: entityId("강좌 또는 문제집을 확인해 주세요.").optional(),
   })
   .refine((value) => value.periodEnd >= value.periodStart, {
     message: "완료일은 시작일보다 빠를 수 없습니다.",
@@ -236,6 +307,7 @@ export async function createPlanAction(_previous: ActionState, formData: FormDat
     minutesPerUnit: formData.get("minutesPerUnit"),
     taskType: formData.get("taskType") || "lecture",
     holidays: formData.get("holidays") || undefined,
+    sourceId: formData.get("sourceId") || undefined,
   });
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "입력 내용을 확인해 주세요.");
 
@@ -266,8 +338,9 @@ export async function createPlanAction(_previous: ActionState, formData: FormDat
     return fail(error instanceof Error ? error.message : "일정을 배분하지 못했습니다.");
   }
 
-  const { unitLabel, minutesPerUnit, taskType, title } = parsed.data;
-  const tasks = buildPlanTasks({ units, title, unitLabel, minutesPerUnit, taskType });
+  const { unitLabel, minutesPerUnit, taskType, title, sourceId } = parsed.data;
+  const tasks = buildPlanTasks({ units, title, unitLabel, minutesPerUnit, taskType })
+    .map((task) => ({ ...task, sourceId }));
 
   if (isDemoMode) {
     return { ok: true, message: `데모 모드입니다. ${tasks.length}일치 과제가 저장되지는 않습니다.` };
