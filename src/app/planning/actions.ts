@@ -13,7 +13,7 @@ import {
   maxMaterialsPerTask,
   removeUploadedMaterials,
 } from "@/lib/data/materials";
-import { archivePlan, createCourse, createPlanWithTasks, createWorkbook, rescheduleTask } from "@/lib/data/planning";
+import { archivePlan, createCourse, createPlanWithTasks, createWorkbook, rescheduleTask, updateCourseUrl } from "@/lib/data/planning";
 import { isDemoMode } from "@/lib/config";
 import { parseCourseOutline } from "@/lib/domain/course-parser";
 import { buildPlanTasks } from "@/lib/domain/plan-tasks";
@@ -213,6 +213,47 @@ export async function deleteMaterialAction(_previous: ActionState, formData: For
 const entityId = (message: string) => (isDemoMode ? z.string().min(1, message) : z.uuid(message));
 
 const archivePlanSchema = z.object({ planId: entityId("계획을 찾을 수 없습니다.") });
+
+const courseUrlSchema = z.object({
+  courseId: entityId("강좌를 찾을 수 없습니다."),
+  // http(s) only: this lands in an <a href> on the student's screen. An empty
+  // string clears the link.
+  url: z
+    .url("강의 주소 형식을 확인해 주세요.")
+    .max(500)
+    .refine((value) => /^https?:\/\//i.test(value), "http:// 또는 https:// 주소만 사용할 수 있어요.")
+    .optional(),
+});
+
+/** Sets or clears the lecture-room link on an already-registered course. */
+export async function updateCourseUrlAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = courseUrlSchema.safeParse({
+    courseId: formData.get("courseId"),
+    url: String(formData.get("url") ?? "").trim() || undefined,
+  });
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "입력 내용을 확인해 주세요.");
+
+  if (isDemoMode) return { ok: true, message: "데모 모드입니다. 링크가 저장되지는 않습니다." };
+
+  const context = await getParentContext();
+  if (!context.ok) return fail(context.message);
+
+  try {
+    await updateCourseUrl(context.context, parsed.data.courseId, parsed.data.url ?? null);
+  } catch (error) {
+    logError("planning/updateCourseUrlAction", error, { courseId: parsed.data.courseId });
+    return fail(error instanceof Error && /강좌/.test(error.message) ? error.message : "링크를 저장하지 못했습니다.");
+  }
+
+  revalidatePath("/planning");
+  revalidatePath("/student");
+  return {
+    ok: true,
+    message: parsed.data.url
+      ? "강의 링크를 붙였습니다. 이 강좌로 만든 과제에서 바로 열 수 있어요."
+      : "강의 링크를 지웠습니다.",
+  };
+}
 
 /**
  * Archives a plan: the plan disappears from the student's list along with its

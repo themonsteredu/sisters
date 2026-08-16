@@ -10,6 +10,7 @@ import {
   ClipboardPaste,
   ExternalLink,
   Layers3,
+  Link2,
   Paperclip,
   Sparkles,
   UserPlus,
@@ -21,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { archivePlanAction, createCourseAction, createPlanAction, createWorkbookAction } from "@/app/planning/actions";
+import { archivePlanAction, createCourseAction, createPlanAction, createWorkbookAction, updateCourseUrlAction } from "@/app/planning/actions";
 import { idleState, type ActionState } from "@/lib/forms/action-state";
 import { useFields } from "@/lib/forms/use-fields";
 import { QuickPlan } from "./quick-plan";
@@ -138,6 +139,9 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
   // "" = free-form plan; "course:<id>" / "workbook:<id>" = built from a
   // registered source, which also links the tasks back to it via sourceId.
   const [planSource, setPlanSource] = useState("");
+  // Inline lecture-link editor on a course card; one course at a time.
+  const [linkCourseId, setLinkCourseId] = useState<string | null>(null);
+  const [linkUrl, setLinkUrl] = useState("");
   // Phones show one day at a time. Defaults to the earliest day with work so
   // the panel is not empty on arrival.
   const [materialTask, setMaterialTask] = useState<PlanningWorkspaceData["tasks"][number] | null>(null);
@@ -189,6 +193,17 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
   );
   const [planState, submitPlan, planPending] = useActionState(
     async (previous: ActionState, formData: FormData) => onSuccess(await createPlanAction(previous, formData), plan),
+    idleState,
+  );
+  const [courseUrlState, submitCourseUrl, courseUrlPending] = useActionState(
+    async (previous: ActionState, formData: FormData) => {
+      const result = await updateCourseUrlAction(previous, formData);
+      if (result.ok) {
+        setLinkCourseId(null);
+        setNotice(result);
+      }
+      return result;
+    },
     idleState,
   );
   const [archiveState, submitArchive, archivePending] = useActionState(
@@ -528,21 +543,55 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
                         <p className="mt-1 text-xs text-slate-400">
                           {studentName(course.studentId)} · {course.lessonCount}강{course.teacher ? ` · ${course.teacher}` : ""}
                         </p>
-                        {course.url ? (
-                          <a
-                            href={course.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-violet-600 hover:underline"
+                        <div className="mt-2 flex flex-wrap items-center gap-3">
+                          {course.url ? (
+                            <a
+                              href={course.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs font-bold text-violet-600 hover:underline"
+                            >
+                              <ExternalLink size={12} /> 강의실 열기
+                            </a>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLinkCourseId(linkCourseId === course.id ? null : course.id);
+                              setLinkUrl(course.url ?? "");
+                            }}
+                            className="inline-flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-violet-600"
                           >
-                            <ExternalLink size={12} /> 강의실 열기
-                          </a>
-                        ) : null}
+                            <Link2 size={12} /> {course.url ? "링크 수정" : "강의 링크 붙이기"}
+                          </button>
+                        </div>
                       </div>
                       <Button variant="secondary" className="shrink-0" onClick={() => applyCourse(course)}>
                         <WandSparkles size={15} /> 계획 만들기
                       </Button>
                     </div>
+                    {linkCourseId === course.id ? (
+                      <form action={submitCourseUrl} className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                        <input type="hidden" name="courseId" value={course.id} />
+                        <div className="flex gap-2">
+                          <input
+                            type="url"
+                            name="url"
+                            value={linkUrl}
+                            onChange={(event) => setLinkUrl(event.target.value)}
+                            placeholder="https://www.mbest.co.kr/…"
+                            aria-label="강의 주소"
+                            className={`${inputClass} flex-1`}
+                          />
+                          <Button type="submit" disabled={courseUrlPending}>{courseUrlPending ? "저장 중…" : "저장"}</Button>
+                          <Button variant="ghost" onClick={() => setLinkCourseId(null)} disabled={courseUrlPending}>취소</Button>
+                        </div>
+                        <p className="text-xs text-slate-400">엠베스트 강의실 주소를 붙여넣으세요. 비우고 저장하면 링크가 지워져요.</p>
+                        {courseUrlState.message && !courseUrlState.ok ? (
+                          <p role="status" className="rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-800">{courseUrlState.message}</p>
+                        ) : null}
+                      </form>
+                    ) : null}
                   </div>
                 )) : <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-400">등록된 강좌가 없습니다.</p>}
               </div>

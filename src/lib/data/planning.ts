@@ -325,6 +325,39 @@ export async function createCourse(context: ParentContext, input: CreateCourseIn
   return course.id as string;
 }
 
+/**
+ * Sets or clears the lecture-room URL on an already-registered course, so
+ * courses created before the URL field existed can get a link too.
+ */
+export async function updateCourseUrl(context: ParentContext, courseId: string, url: string | null) {
+  const { supabase, familyId } = context;
+
+  const { data: course } = await supabase
+    .from("sisters_courses")
+    .select("id")
+    .eq("id", courseId)
+    .eq("family_id", familyId)
+    .maybeSingle();
+  if (!course) throw new Error("강좌를 찾을 수 없습니다.");
+
+  const { error } = await supabase
+    .from("sisters_courses")
+    .update({ external_url: url })
+    .eq("id", courseId)
+    .eq("family_id", familyId);
+  if (error) {
+    logError("data/planning.updateCourseUrl", error, { familyId, courseId });
+    throw error;
+  }
+
+  await recordAudit(context, {
+    action: "course_url_updated",
+    entityType: "course",
+    entityId: courseId,
+    metadata: { cleared: url === null },
+  });
+}
+
 export interface CreateWorkbookInput {
   studentId: string;
   subjectId: string;
