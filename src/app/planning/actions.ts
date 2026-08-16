@@ -41,6 +41,12 @@ const courseSchema = z.object({
   subjectId,
   title: z.string().trim().min(1, "강좌 이름을 입력해 주세요.").max(120),
   teacher: z.string().trim().max(60).optional(),
+  // http(s) only: this lands in an <a href> on the student's screen.
+  url: z
+    .url("강의 주소 형식을 확인해 주세요.")
+    .max(500)
+    .refine((value) => /^https?:\/\//i.test(value), "http:// 또는 https:// 주소만 사용할 수 있어요.")
+    .optional(),
   outline: z.string().trim().min(1, "목차를 붙여넣어 주세요.").max(50_000),
   source: z.enum(["mbest", "manual"]).default("manual"),
 });
@@ -51,6 +57,7 @@ export async function createCourseAction(_previous: ActionState, formData: FormD
     subjectId: formData.get("subjectId"),
     title: formData.get("title"),
     teacher: formData.get("teacher") || undefined,
+    url: String(formData.get("url") ?? "").trim() || undefined,
     outline: formData.get("outline"),
     source: formData.get("source") || "manual",
   });

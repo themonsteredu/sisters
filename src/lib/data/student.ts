@@ -1,6 +1,6 @@
 import "server-only";
 
-import { demoStudents, demoTasks, demoTests } from "@/lib/demo-data";
+import { demoCourses, demoStudents, demoTasks, demoTests } from "@/lib/demo-data";
 import type { EvidenceKind, TaskStatus, TaskType } from "@/lib/domain/types";
 import { logError } from "@/lib/observability/log";
 import { getStudentContext, isDemoContext } from "./context";
@@ -17,6 +17,8 @@ export interface StudentTask {
   status: TaskStatus;
   evidence: EvidenceKind[];
   materials: TaskMaterial[];
+  /** Course page to watch the lecture on, when the task came from a course with a URL. */
+  lectureUrl: string | null;
 }
 
 export interface StudentUpcomingTest {
@@ -62,6 +64,7 @@ function demoData(): StudentHomeData {
         status: task.status,
         evidence: task.evidence,
         materials: [],
+        lectureUrl: demoCourses.find((course) => course.id === task.sourceId)?.url ?? null,
       })),
     nextTest: test
       ? { id: test.id, title: test.title, questionCount: test.questions.length, timeLimitMinutes: test.timeLimitMinutes, passScore: test.passScore }
@@ -91,7 +94,7 @@ export async function loadStudentHome(): Promise<StudentHomeData> {
       .maybeSingle(),
     supabase
       .from("sisters_tasks")
-      .select("id,task_type,title,detail,due_time,estimated_minutes,status,evidence_requirements,sisters_subjects(name)")
+      .select("id,task_type,title,detail,due_time,estimated_minutes,status,evidence_requirements,source_id,sisters_subjects(name)")
       .eq("family_id", familyId)
       .eq("student_id", studentId)
       .eq("scheduled_date", today)
@@ -134,9 +137,27 @@ export async function loadStudentHome(): Promise<StudentHomeData> {
     status: row.status as TaskStatus,
     evidence: (Array.isArray(row.evidence_requirements) ? row.evidence_requirements : ["check"]) as EvidenceKind[],
     materials: [] as TaskMaterial[],
+    sourceId: row.source_id as string | null,
+    lectureUrl: null as string | null,
   }));
 
-  const materialsByTask = await listMaterialsByTask(result.context, taskRows.map((task) => task.id));
+  // Tasks built from a course carry its id in source_id; one lookup resolves
+  // the course page so the student can jump straight to the lecture.
+  const sourceIds = [...new Set(taskRows.map((task) => task.sourceId).filter((id): id is string => Boolean(id)))];
+  const materialsByTaskPromise = listMaterialsByTask(result.context, taskRows.map((task) => task.id));
+  if (sourceIds.length) {
+    const { data: courseRows } = await supabase
+      .from("sisters_courses")
+      .select("id,external_url")
+      .eq("family_id", familyId)
+      .in("id", sourceIds);
+    const urlByCourse = new Map((courseRows ?? []).map((row) => [row.id, row.external_url as string | null]));
+    for (const task of taskRows) {
+      if (task.sourceId) task.lectureUrl = urlByCourse.get(task.sourceId) ?? null;
+    }
+  }
+
+  const materialsByTask = await materialsByTaskPromise;
   for (const task of taskRows) task.materials = materialsByTask.get(task.id) ?? [];
 
   return {

@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardPaste,
+  ExternalLink,
   Layers3,
   Paperclip,
   Sparkles,
@@ -147,7 +148,7 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
   const firstStudent = data.students[0]?.id ?? "";
   const firstSubject = data.subjects[0]?.id ?? "";
 
-  const course = useFields({ studentId: firstStudent, subjectId: firstSubject, title: "", teacher: "", outline: "" });
+  const course = useFields({ studentId: firstStudent, subjectId: firstSubject, title: "", teacher: "", url: "", outline: "" });
   const workbook = useFields({ studentId: firstStudent, subjectId: firstSubject, title: "", unit: "", currentPage: "1", endPage: "", targetDate: "" });
   const plan = useFields({
     studentId: firstStudent,
@@ -527,6 +528,16 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
                         <p className="mt-1 text-xs text-slate-400">
                           {studentName(course.studentId)} · {course.lessonCount}강{course.teacher ? ` · ${course.teacher}` : ""}
                         </p>
+                        {course.url ? (
+                          <a
+                            href={course.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-violet-600 hover:underline"
+                          >
+                            <ExternalLink size={12} /> 강의실 열기
+                          </a>
+                        ) : null}
                       </div>
                       <Button variant="secondary" className="shrink-0" onClick={() => applyCourse(course)}>
                         <WandSparkles size={15} /> 계획 만들기
@@ -584,6 +595,11 @@ export function PlanningWorkspace({ data }: { data: PlanningWorkspaceData }) {
               <label className="block">
                 <span className="mb-2 block text-sm font-bold">선생님 (선택)</span>
                 <input {...course.field("teacher")} maxLength={60} className={inputClass} />
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-bold">강의 주소 (선택)</span>
+                <input {...course.field("url")} type="url" maxLength={500} placeholder="https://www.mbest.co.kr/…" className={inputClass} />
+                <span className="mt-1 block text-xs text-slate-400">엠베스트 강의실 주소를 넣어 두면 아이가 할 일에서 바로 강의를 열 수 있어요.</span>
               </label>
               <label className="block">
                 <span className="mb-2 block text-sm font-bold">목차 붙여넣기</span>

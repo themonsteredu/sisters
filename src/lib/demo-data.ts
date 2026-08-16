@@ -48,6 +48,7 @@ export const demoTasks: StudyTask[] = [
     estimatedMinutes: 35,
     status: "approved",
     evidence: ["check", "timer", "memo"],
+    sourceId: "course-1",
   },
   {
     id: "task-2",
@@ -250,6 +251,7 @@ export const demoCourses: Course[] = [
     title: "중2 영어 문법 완성",
     teacher: "엠베스트 영어",
     source: "mbest",
+    url: "https://www.mbest.co.kr",
     lessons: Array.from({ length: 24 }, (_, index) => ({ id: `eng-${index + 1}`, index: index + 1, title: `${index + 1}강 핵심 문법` })),
     completedLessonCount: 11,
   },

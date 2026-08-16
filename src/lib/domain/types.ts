@@ -50,6 +50,8 @@ export interface Course {
   title: string;
   teacher?: string;
   source: "mbest" | "manual";
+  /** Where the lectures are watched (e.g. the Mbest course page). */
+  url?: string;
   lessons: CourseLesson[];
   completedLessonCount: number;
 }

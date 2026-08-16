@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen, Camera, Check, CheckCircle2, ChevronRight, FileText, Flame, Headphones,
-  FileDown, Lightbulb, Play, Send, Sparkles, Square, Timer, Trophy, Upload, X,
+  FileDown, Lightbulb, MonitorPlay, Play, Send, Sparkles, Square, Timer, Trophy, Upload, X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -178,8 +178,19 @@ export function StudentHome({ data }: { data: StudentHomeData }) {
                         </span>
                       ))}
                     </div>
-                    {task.materials.length ? (
+                    {task.lectureUrl || task.materials.length ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">
+                        {task.lectureUrl ? (
+                          <a
+                            href={task.lectureUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(event) => event.stopPropagation()}
+                            className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-2 py-1 text-[10px] font-bold text-white hover:bg-violet-700"
+                          >
+                            <MonitorPlay size={11} /> 강의 보러 가기
+                          </a>
+                        ) : null}
                         {task.materials.map((material) => (
                           material.url ? (
                             <a
@@ -310,6 +321,22 @@ export function StudentHome({ data }: { data: StudentHomeData }) {
                   {running ? <Square size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
                 </button>
               </div>
+
+              {activeTask.lectureUrl ? (
+                <a
+                  href={activeTask.lectureUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 rounded-xl bg-violet-600 p-4 text-white shadow-md shadow-violet-200 transition hover:bg-violet-700"
+                >
+                  <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white/15"><MonitorPlay size={22} /></span>
+                  <span className="min-w-0 flex-1">
+                    <strong className="block text-sm font-black">강의 보러 가기</strong>
+                    <span className="text-xs text-violet-100">새 탭에서 강의실이 열려요. 다 듣고 돌아와 제출해 주세요.</span>
+                  </span>
+                  <ChevronRight size={20} className="shrink-0" />
+                </a>
+              ) : null}
 
               {activeTask.materials.length ? (
                 <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-3">

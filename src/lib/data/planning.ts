@@ -25,6 +25,8 @@ export interface PlanningCourse {
   subject: string;
   title: string;
   teacher: string | null;
+  /** Where the lectures are watched (e.g. the Mbest course page). */
+  url: string | null;
   lessonCount: number;
 }
 
@@ -110,6 +112,7 @@ function demoWorkspace(month: string): PlanningWorkspaceData {
       subject: course.subject,
       title: course.title,
       teacher: course.teacher ?? null,
+      url: course.url ?? null,
       lessonCount: course.lessons.length,
     })),
     workbooks: demoWorkbooks.map((workbook) => ({
@@ -174,7 +177,7 @@ export async function loadPlanningWorkspace(month = currentSeoulMonth()): Promis
     supabase.from("sisters_subjects").select("id,name").eq("family_id", familyId).order("sort_order"),
     supabase
       .from("sisters_courses")
-      .select("id,student_id,subject_id,title,teacher,sisters_subjects(name),sisters_lessons(count)")
+      .select("id,student_id,subject_id,title,teacher,external_url,sisters_subjects(name),sisters_lessons(count)")
       .eq("family_id", familyId)
       .order("created_at", { ascending: false })
       .limit(100),
@@ -241,6 +244,7 @@ export async function loadPlanningWorkspace(month = currentSeoulMonth()): Promis
       subject: subjectName(row),
       title: row.title,
       teacher: row.teacher,
+      url: row.external_url,
       lessonCount: embeddedCount(row.sisters_lessons),
     })),
     workbooks: (workbooks.data ?? []).map((row) => ({
@@ -272,6 +276,7 @@ export interface CreateCourseInput {
   subjectId: string;
   title: string;
   teacher?: string;
+  url?: string;
   source: "mbest" | "manual";
   lessons: Array<{ index: number; title: string }>;
 }
@@ -287,6 +292,7 @@ export async function createCourse(context: ParentContext, input: CreateCourseIn
       subject_id: input.subjectId,
       title: input.title,
       teacher: input.teacher || null,
+      external_url: input.url || null,
       source: input.source,
     })
     .select("id")
