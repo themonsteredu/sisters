@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>Sisters 홍보영상</title>
+<style>
+:root{--bg:#f6f4ff;--ink:#1e1b3a;--mute:#6b6890;--violet:#6d5ce8;--violet2:#7c3aed;--rose:#f43f5e;--mint:#10b981;--amber:#f59e0b}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg);color:var(--ink);font-family:"Pretendard",sans-serif;letter-spacing:-0.02em}
+.stage{position:absolute;inset:0;overflow:hidden;background:radial-gradient(1100px 700px at 85% 10%,#e9e3ff 0%,transparent 60%),radial-gradient(900px 600px at 5% 95%,#ffe4ec 0%,transparent 60%),var(--bg)}
+.dots{position:absolute;inset:-100px;background-image:radial-gradient(circle at 2px 2px,rgba(109,92,232,.16) 2px,transparent 0);background-size:40px 40px}
+.scene{position:absolute;inset:0;opacity:0}
+.a{will-change:transform,opacity}
+/* hero */
+.hero .full{position:absolute;inset:0;overflow:hidden}
+.hero .full img{position:absolute;left:0;top:0;transform-origin:0 0}
+.brandchip{position:absolute;left:70px;top:60px;display:flex;align-items:center;gap:18px;padding:14px 28px 14px 16px;border-radius:999px;background:rgba(255,255,255,.92);box-shadow:0 16px 50px rgba(76,56,180,.18);border:1.5px solid #e4defd}
+.brandchip img{width:54px;height:54px}
+.brandchip b{font-size:30px;font-weight:900}
+.brandchip span{font-size:24px;color:var(--mute);font-weight:600}
+/* window scenes */
+.cap{position:absolute;left:100px;top:0;bottom:0;width:580px;display:flex;flex-direction:column;justify-content:center}
+.cap .num{font-size:26px;font-weight:800;color:var(--violet);letter-spacing:.06em;margin-bottom:22px}
+.cap h2{font-size:66px;font-weight:900;line-height:1.18;letter-spacing:-0.045em}
+.cap h2 em,.cards .head h2 em,.outro .line em{font-style:normal;background:linear-gradient(90deg,var(--violet2),var(--rose));-webkit-background-clip:text;background-clip:text;color:transparent}
+.cap p{font-size:31px;font-weight:500;color:#4c4a6b;line-height:1.5;margin-top:30px}
+.chips{display:flex;flex-wrap:wrap;gap:12px;margin-top:34px}
+.chip{font-size:24px;font-weight:700;padding:10px 20px;border-radius:999px;border:1.5px solid #d6cffc;color:var(--violet);background:#fff}
+.win{position:absolute;left:720px;top:176px;width:1110px;border-radius:22px;overflow:hidden;background:#fff;border:1.5px solid #e1dcf7;box-shadow:0 40px 110px rgba(60,40,150,.22),0 0 0 1px rgba(60,40,150,.04)}
+.win .bar{height:52px;display:flex;align-items:center;gap:10px;padding:0 22px;background:#f3f1fb;border-bottom:1px solid #e6e2f6}
+.win .bar i{width:14px;height:14px;border-radius:50%;background:#d8d4ea;display:block}
+.win .bar i:nth-child(1){background:#ff8a80}.win .bar i:nth-child(2){background:#ffd166}.win .bar i:nth-child(3){background:#7bd88f}
+.win .bar span{margin-left:22px;flex:1;height:32px;border-radius:9px;background:#fff;color:#7a7797;font-size:19px;display:flex;align-items:center;padding:0 18px;font-weight:600}
+.win .view{position:relative;width:1110px;height:624px;overflow:hidden;background:#edf0f4}
+.win .view img{position:absolute;left:0;top:0;transform-origin:0 0}
+.tag{position:absolute;padding:14px 24px;border-radius:14px;background:#fff;border:2px solid var(--violet);font-size:27px;font-weight:800;color:var(--violet);box-shadow:0 18px 50px rgba(60,40,150,.2);white-space:nowrap}
+.tag.rose{border-color:var(--rose);color:var(--rose)}
+.tag.mint{border-color:var(--mint);color:#059669}
+/* cards */
+.cards .head{position:absolute;left:0;right:0;top:110px;text-align:center}
+.cards .head h2{font-size:78px;font-weight:900;letter-spacing:-0.045em}
+.cards .head p{font-size:32px;color:#4c4a6b;margin-top:18px;font-weight:500}
+.cgrid{position:absolute;left:160px;right:160px;top:390px;display:grid;grid-template-columns:repeat(4,1fr);gap:26px}
+.card{height:230px;border-radius:26px;padding:30px;background:#fff;border:1.5px solid #e6e1fa;box-shadow:0 18px 50px rgba(60,40,150,.08);display:flex;flex-direction:column;justify-content:space-between}
+.card b{display:block;margin-bottom:10px;font-size:22px;color:var(--violet);font-weight:800;letter-spacing:.04em}
+.card strong{font-size:35px;font-weight:900;line-height:1.25;letter-spacing:-0.035em}
+.card .ic{font-size:46px;line-height:1}
+.card.hot{border-color:#fbc4cf;background:linear-gradient(160deg,#fff,#fff3f5)} .card.hot b{color:var(--rose)}
+.card.ok{border-color:#b9ebd6;background:linear-gradient(160deg,#fff,#effbf5)} .card.ok b{color:#059669}
+/* outro */
+.outro{display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding-bottom:90px}
+.logo{display:flex;align-items:center;gap:30px}
+.logo img{width:130px;height:130px;filter:drop-shadow(0 20px 40px rgba(109,92,232,.35))}
+.logo .name{font-size:104px;font-weight:900;letter-spacing:-0.03em;text-align:left;line-height:1}
+.logo .name small{display:block;font-size:30px;letter-spacing:.02em;color:var(--violet);font-weight:700;margin-top:14px}
+.outro .line{font-size:54px;font-weight:800;margin-top:70px;letter-spacing:-0.04em}
+.url{margin-top:56px;font-size:40px;font-weight:800;padding:22px 50px;border-radius:999px;background:linear-gradient(90deg,var(--violet2),var(--violet));color:#fff;letter-spacing:0;box-shadow:0 20px 50px rgba(109,92,232,.35)}
+.outro .foot{margin-top:40px;font-size:27px;color:var(--mute);font-weight:600}
+.subs{position:absolute;left:0;right:0;bottom:44px;display:flex;justify-content:center;pointer-events:none}
+.subs span{font-size:40px;font-weight:600;line-height:1.35;color:#fff;background:rgba(24,20,52,.84);padding:14px 34px;border-radius:16px;text-align:center;max-width:1560px;box-shadow:0 10px 40px rgba(24,20,52,.25);letter-spacing:-0.02em}
+.progress{position:absolute;left:0;bottom:0;height:6px;background:linear-gradient(90deg,var(--violet2),var(--rose))}
+</style></head>
+<body>
+<div class="stage" id="stage">
+  <div class="dots a" id="dots"></div>
+
+  <section class="scene hero" id="s-hero">
+    <div class="full"><img id="v-hero"></div>
+  </section>
+
+  <section class="scene" id="s-plan">
+    <div class="cap">
+      <div class="num a" data-in="0.2">STEP 1 · 학습계획</div>
+      <h2 class="a" data-in="0.4">한 줄만 적으면<br><em>계획이 완성</em></h2>
+      <p class="a" data-in="0.8">“지우 수학 80쪽, 월수금 하루 5쪽”처럼 말하듯 적으면 학생·기간·요일·분량을 알아서 채워요.</p>
+      <div class="chips a" data-in="1.2"><span class="chip">강좌·문제집</span><span class="chip">휴일 제외</span><span class="chip">하루 최대량</span></div>
+    </div>
+    <div class="win a" data-win><div class="bar"><i></i><i></i><i></i><span>sonsisters.vercel.app/planning</span></div><div class="view"><img id="v-plan"></div></div>
+  </section>
+
+  <section class="scene" id="s-student">
+    <div class="cap">
+      <div class="num a" data-in="0.2">STEP 2 · 학생의 오늘</div>
+      <h2 class="a" data-in="0.4">공부하고,<br><em>사진으로 인증</em></h2>
+      <p class="a" data-in="0.8">오늘 할 일을 열어 타이머를 켜고, 공부한 노트를 찍어 메모와 함께 제출해요.</p>
+      <div class="chips a" data-in="1.2"><span class="chip">타이머</span><span class="chip">사진 제출</span><span class="chip">학습 메모</span></div>
+    </div>
+    <div class="win a" data-win><div class="bar"><i></i><i></i><i></i><span>sonsisters.vercel.app/student</span></div><div class="view"><img id="v-student"></div></div>
+  </section>
+
+  <section class="scene" id="s-review">
+    <div class="cap">
+      <div class="num a" data-in="0.2">STEP 3 · 부모 검수</div>
+      <h2 class="a" data-in="0.4">AI가 먼저 보고,<br><em>부모님이 결정</em></h2>
+      <p class="a" data-in="0.8">AI 1차 분석은 참고용. 승인·반려와 피드백은 언제나 부모님이 직접 남겨요.</p>
+    </div>
+    <div class="win a" data-win><div class="bar"><i></i><i></i><i></i><span>sonsisters.vercel.app/reviews</span></div><div class="view"><img id="v-review"></div></div>
+    <div class="tag mint a" id="tag-review" style="left:1450px;top:858px">✓ 최종 승인은 부모님만</div>
+  </section>
+
+  <section class="scene" id="s-test">
+    <div class="cap">
+      <div class="num a" data-in="0.2">STEP 4 · 확인 테스트</div>
+      <h2 class="a" data-in="0.4">배운 것까지<br><em>진짜 확인</em></h2>
+      <p class="a" data-in="0.8">철자 쓰기, 뜻 고르기, 듣고 쓰기. 영단어·암기 테스트로 기억에 남았는지 봐요.</p>
+      <div class="chips a" data-in="1.2"><span class="chip">서버 자동 채점</span><span class="chip">불합격 시 재시험</span></div>
+    </div>
+    <div class="win a" data-win><div class="bar"><i></i><i></i><i></i><span>sonsisters.vercel.app/student/tests</span></div><div class="view"><img id="v-test"></div></div>
+  </section>
+
+  <section class="scene cards" id="s-cards">
+    <div class="head"><h2 class="a" data-in="0.1">계획부터 <em>보완학습</em>까지 한 흐름</h2><p class="a" data-in="0.4">놓친 공부는 그냥 넘어가지 않아요.</p></div>
+    <div class="cgrid">
+      <div class="card a" data-in="0.6"><span class="ic">✍️</span><div><b>PLAN</b><strong>한 줄로<br>계획 만들기</strong></div></div>
+      <div class="card a" data-in="0.75"><span class="ic">🗓️</span><div><b>SCHEDULE</b><strong>요일·휴일 반영<br>자동 배분</strong></div></div>
+      <div class="card a" data-in="0.9"><span class="ic">📎</span><div><b>MATERIAL</b><strong>학습지 첨부,<br>바로 열어 풀기</strong></div></div>
+      <div class="card a" data-in="1.05"><span class="ic">📸</span><div><b>PROOF</b><strong>타이머·사진·<br>메모로 제출</strong></div></div>
+      <div class="card ok a" data-in="1.2"><span class="ic">✅</span><div><b>REVIEW</b><strong>부모님<br>최종 승인</strong></div></div>
+      <div class="card hot a" data-in="1.35"><span class="ic">🔁</span><div><b>RETRY</b><strong>반려하면 다음 날<br>보완 과제 자동</strong></div></div>
+      <div class="card a" data-in="1.5"><span class="ic">🔔</span><div><b>NOTICE</b><strong>제출·검수·테스트<br>알림</strong></div></div>
+      <div class="card a" data-in="1.65"><span class="ic">🔒</span><div><b>SAFE</b><strong>가족별<br>데이터 분리</strong></div></div>
+    </div>
+  </section>
+
+  <section class="scene" id="s-report">
+    <div class="cap">
+      <div class="num a" data-in="0.2">STEP 5 · 리포트</div>
+      <h2 class="a" data-in="0.4">아이별 성장이<br><em>한눈에</em></h2>
+      <p class="a" data-in="0.8">오늘 현황부터 완료율·정시율·학습시간·평균 점수까지 자녀별로 비교해요.</p>
+    </div>
+    <div class="win a" data-win><div class="bar"><i></i><i></i><i></i><span id="url-report">sonsisters.vercel.app/dashboard</span></div><div class="view"><img id="v-report"></div></div>
+  </section>
+
+  <section class="scene outro" id="s-outro">
+    <div class="logo a" data-in="0.1"><img src="icon.svg"><div class="name">Sisters<small>우리 가족 학습 매니저</small></div></div>
+    <div class="line a" data-in="0.6">계획만 세우지 말고, <em>배운 것까지 확인하세요</em></div>
+    <div class="url a" data-in="1.1">sonsisters.vercel.app</div>
+    <div class="foot a" data-in="1.5">설치 가능한 PWA · 휴대폰·태블릿·PC · 부모 최종 승인</div>
+  </section>
+  <div class="subs"><span id="sub"></span></div>
+  <div class="progress" id="prog"></div>
+</div>
+<script>
+const FPS = 30;
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const ease = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2;
+const eout = t => 1 - Math.pow(1 - t, 3);
+const lerp = (a, b, t) => a + (b - a) * t;
+// n: frame count, w: frame width in px (1600 css * DPR 1.5)
+const CLIPS = window.CLIPS || {
+  landing:{n:181,w:2400}, plan:{n:324,w:2400}, student:{n:344,w:2400}, review:{n:328,w:2400},
+  test:{n:234,w:2400}, dashboard:{n:136,w:2400}, report:{n:136,w:2400},
+};
+// view rects in 1600x900 css space: [x,y,w]  (h = w*9/16)
+const SCENES = [
+  { id:'s-hero', dur:6.0, img:'v-hero', segs:[
+      { clip:'landing', from:0.2, rate:0.45, len:4.4, view:[[0,0,1600],[80,45,1440]] },
+      { clip:'landing', from:2.4, rate:1.3, len:1.6, view:[[80,45,1440],[80,45,1440]] } ] },
+  { id:'s-plan', dur:9.2, img:'v-plan', segs:[
+      { clip:'plan', from:1.0, rate:1, len:6.2, view:[[0,0,1600],[280,170,1290]] },
+      { clip:'plan', from:7.8, rate:1, len:3.0, view:[[380,30,1040],[380,250,1040]] } ] },
+  { id:'s-student', dur:8.8, img:'v-student', segs:[
+      { clip:'student', from:1.2, rate:1, len:3.0, view:[[0,0,1600],[400,40,800]] },
+      { clip:'student', from:4.2, rate:1.15, len:5.8, view:[[400,40,800],[400,380,800]] } ] },
+  { id:'s-review', dur:8.6, img:'v-review', segs:[
+      { clip:'review', from:0.4, rate:1, len:2.6, view:[[0,0,1600],[250,90,1340]] },
+      { clip:'review', from:3.2, rate:0.95, len:6.0, view:[[600,290,960],[610,300,950]] } ] },
+  { id:'s-test', dur:7.0, img:'v-test', segs:[
+      { clip:'test', from:0.8, rate:1, len:1.6, view:[[0,0,1600],[470,60,860]] },
+      { clip:'test', from:2.4, rate:0.98, len:5.4, view:[[470,60,860],[480,70,840]] } ] },
+  { id:'s-cards', dur:6.0 },
+  { id:'s-report', dur:7.2, img:'v-report', segs:[
+      { clip:'dashboard', from:0.3, rate:1, len:3.4, view:[[0,0,1600],[270,95,1150]] },
+      { clip:'report', from:0.3, rate:1, len:3.8, view:[[100,50,1450],[280,110,1300]] } ] },
+  { id:'s-outro', dur:6.4 },
+];
+const XF = 0.6;
+let acc = 0; for (const s of SCENES) { s.start = acc; acc += s.dur - XF; }
+const TOTAL = acc + XF;
+window.TOTAL = TOTAL; window.SCENES = SCENES;
+function src(clip, i) { const c = CLIPS[clip]; i = Math.max(1, Math.min(c.n, i)); return `frames/${clip}/${String(i).padStart(5,'0')}.jpg`; }
+async function setImg(el, url) {
+  if (el.dataset.src === url) return;
+  el.dataset.src = url; el.src = url;
+  try { await el.decode(); } catch {}
+}
+const SUBS = [
+  [0.5,5.0,'계획표는 세웠는데, 아이가 정말 공부했는지 궁금하셨죠?'],
+  [5.6,9.6,'Sisters는 한 줄만 적으면 학습계획을 알아서 만들어 줘요.'],
+  [9.8,13.6,'기간·요일·하루 분량까지 이해해서 날짜별로 나눠 줍니다.'],
+  [14.2,18.0,'아이는 오늘 할 일을 열고, 타이머를 켜고 공부해요.'],
+  [18.2,21.9,'공부한 노트를 사진으로 찍어 메모와 함께 제출하죠.'],
+  [22.4,26.2,'AI가 먼저 살펴보고, 확인할 부분을 알려 드려요.'],
+  [26.4,30.0,'승인과 피드백은 언제나 부모님이 직접 결정합니다.'],
+  [30.4,33.8,'배운 내용은 영단어·암기 테스트로 확인하고,'],
+  [34.0,36.4,'채점은 자동으로 이뤄져요.'],
+  [36.8,41.6,'반려한 공부는 다음 날 보완 과제로 자동 배정돼요.'],
+  [42.2,47.9,'완료율, 정시율, 학습시간, 평균 점수까지 아이별로 한눈에.'],
+  [48.8,54.4,'계획부터 확인까지, 우리 가족 학습 매니저 Sisters.'],
+];
+window.SUBS = SUBS;
+window.render = async function (t) {
+  { const cur = SUBS.find(x => t >= x[0] && t <= x[1]); const el = document.getElementById('sub');
+    if (cur) { el.textContent = cur[2]; const o = Math.min(clamp((t-cur[0])/0.25), clamp((cur[1]-t)/0.25)); el.parentElement.style.opacity = o; el.style.visibility='visible'; }
+    else { el.style.visibility='hidden'; } }
+  document.getElementById('prog').style.width = (t / TOTAL * 100) + '%';
+  document.getElementById('dots').style.transform = `translate(${-(t*6)%40}px, ${-(t*3)%40}px)`;
+  const waits = [];
+  for (const s of SCENES) {
+    const el = document.getElementById(s.id);
+    const lt = t - s.start;
+    if (lt < -0.01 || lt > s.dur + 0.01) { el.style.opacity = 0; el.style.display = 'none'; continue; }
+    el.style.display = '';
+    const fin = s === SCENES[0] ? 1 : clamp(lt / XF), fout = s === SCENES.at(-1) ? clamp((s.dur - lt) / 0.8) : clamp((s.dur - lt) / XF);
+    el.style.opacity = Math.min(fin, fout);
+    el.querySelectorAll('[data-in]').forEach(a => {
+      const p = eout(clamp((lt - parseFloat(a.dataset.in)) / 0.7));
+      a.style.opacity = p; a.style.transform = `translateY(${(1 - p) * 34}px)`;
+    });
+    const win = el.querySelector('[data-win]');
+    if (win) { const p = eout(clamp((lt - 0.15) / 0.9)); win.style.opacity = p; win.style.transform = `translateY(${(1-p)*50}px) scale(${lerp(.96,1,p)})`; }
+    if (s.id === 's-review') { const tg = document.getElementById('tag-review'); const p = eout(clamp((lt-3.0)/0.6)); tg.style.opacity = p; tg.style.transform = `translateY(${(1-p)*20}px)`; }
+    if (s.id === 's-report') document.getElementById('url-report').textContent = lt < 3.4 ? 'sonsisters.vercel.app/dashboard' : 'sonsisters.vercel.app/reports';
+    if (s.segs) {
+      let off = 0, seg = s.segs[0];
+      for (const g of s.segs) { if (lt >= off) seg = g; off += g.len; }
+      let segStart = 0; for (const g of s.segs) { if (g === seg) break; segStart += g.len; }
+      const st = clamp(lt - segStart, 0, seg.len);
+      const frame = Math.round((seg.from + st * seg.rate) * FPS) + 1;
+      const img = document.getElementById(s.img);
+      const box = img.parentElement; const bw = box.clientWidth;
+      const k = ease(clamp(st / seg.len));
+      const [a, b] = seg.view;
+      const vx = lerp(a[0], b[0], k), vy = lerp(a[1], b[1], k), vw = lerp(a[2], b[2], k);
+      const sc = bw / vw;
+      const pxScale = 1600 / CLIPS[seg.clip].w;
+      img.style.width = CLIPS[seg.clip].w + 'px';
+      img.style.transform = `translate(${-vx*sc}px, ${-vy*sc}px) scale(${sc*pxScale})`;
+      waits.push(setImg(img, src(seg.clip, frame)));
+    }
+  }
+  await Promise.all(waits);
+};
+</script>
+</body></html>
